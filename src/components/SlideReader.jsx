@@ -1,0 +1,1143 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Maximize, 
+  Minimize, 
+  Volume2, 
+  VolumeX, 
+  Play, 
+  Pause, 
+  List, 
+  X, 
+  Bookmark, 
+  Share2, 
+  Sparkles, 
+  Type, 
+  Moon, 
+  Sun, 
+  Palette,
+  RotateCcw,
+  Mic,
+  Settings2,
+  Headphones,
+  Radio
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { sfx, narrator } from '../utils/audio';
+
+export default function SlideReader({ book, onClose, onSaveProgress, initialSlide = 0 }) {
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(initialSlide);
+  const [readingTheme, setReadingTheme] = useState('darknight'); // 'darknight' | 'parchment' | 'emerald'
+  const [fontSize, setFontSize] = useState(1.1); // rem
+  const [fontFamily, setFontFamily] = useState('serif'); // 'serif' | 'sans'
+  const [isAutoPlay, setIsAutoPlay] = useState(false);
+  const [autoPlayInterval, setAutoPlayInterval] = useState(8); // seconds
+  const [isNarrating, setIsNarrating] = useState(false);
+  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSparkles, setShowSparkles] = useState(true);
+  const [turnDirection, setTurnDirection] = useState('next');
+  const [isOpeningCinematic, setIsOpeningCinematic] = useState(true);
+
+  // High Quality Narrator State
+  const [activeSentence, setActiveSentence] = useState('');
+  const [sentenceProgress, setSentenceProgress] = useState({ current: 0, total: 0 });
+  const [isNarratorSettingsOpen, setIsNarratorSettingsOpen] = useState(false);
+  const [autoStoryMode, setAutoStoryMode] = useState(true); // Automatically advance slide when narration ends
+  const [narratorSpeed, setNarratorSpeed] = useState(0.95);
+  const [narratorPitch, setNarratorPitch] = useState(0.85);
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState('');
+
+  const containerRef = useRef(null);
+  const autoPlayTimerRef = useRef(null);
+  const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsOpeningCinematic(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const slides = book?.slides || [];
+  const currentSlide = slides[currentSlideIndex] || {};
+  const isFirst = currentSlideIndex === 0;
+  const isLast = currentSlideIndex === slides.length - 1;
+
+  const handleNext = () => {
+    if (!isLast) {
+      setTurnDirection('next');
+      sfx.playFlip();
+      if (isNarrating) narrator.stop();
+      setCurrentSlideIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (!isFirst) {
+      setTurnDirection('prev');
+      sfx.playFlip();
+      if (isNarrating) narrator.stop();
+      setCurrentSlideIndex(prev => prev - 1);
+    }
+  };
+
+  // Touch Swipe Handlers for Mobile & Tablet
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      touchStartXRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+
+    // Detect horizontal swipe above 40px threshold where horizontal dominates
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      if (deltaX < 0) {
+        handleNext(); // swipe left -> advance
+      } else {
+        handlePrev(); // swipe right -> previous
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !isAutoPlay)) {
+        handleNext();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        handlePrev();
+      } else if (e.key === 'Escape') {
+        if (isTocOpen) setIsTocOpen(false);
+        else onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentSlideIndex, isTocOpen, isAutoPlay, slides.length, isFirst, isLast, onClose]);
+
+  // Narrator state tracking & available voices loader
+  useEffect(() => {
+    narrator.onStateChange = (speaking) => {
+      setIsNarrating(speaking);
+      if (!speaking) {
+        setActiveSentence('');
+      }
+    };
+
+    narrator.onSentenceChange = (curr, total, text) => {
+      setSentenceProgress({ current: curr + 1, total });
+      setActiveSentence(text);
+    };
+
+    const loadVoicesList = () => {
+      const v = narrator.getAvailableVoices();
+      setAvailableVoices(v);
+      if (narrator.selectedVoice) {
+        setSelectedVoiceName(narrator.selectedVoice.name);
+      }
+    };
+
+    loadVoicesList();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoicesList;
+    }
+
+    return () => {
+      narrator.stop();
+    };
+  }, []);
+
+  // AutoPlay effect
+  useEffect(() => {
+    if (isAutoPlay) {
+      autoPlayTimerRef.current = setInterval(() => {
+        setCurrentSlideIndex((prev) => {
+          if (prev < slides.length - 1) {
+            sfx.playFlip();
+            return prev + 1;
+          } else {
+            setIsAutoPlay(false);
+            return prev;
+          }
+        });
+      }, autoPlayInterval * 1000);
+    } else {
+      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+    }
+
+    return () => {
+      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+    };
+  }, [isAutoPlay, autoPlayInterval, slides.length]);
+
+  // Save progress & trigger celebration at the end
+  useEffect(() => {
+    const pct = ((currentSlideIndex + 1) / Math.max(1, slides.length)) * 100;
+    if (onSaveProgress) {
+      onSaveProgress(book.id, pct, currentSlideIndex);
+    }
+
+    if (isLast && slides.length > 1) {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      sfx.playChime();
+    }
+  }, [currentSlideIndex]);
+
+  // Play narration for a specific slide
+  const playCurrentSlideNarration = (slideIndex) => {
+    const s = slides[slideIndex];
+    if (!s) return;
+    narrator.speakSlide(s.title, s.content, () => {
+      // Called when current slide narration finishes
+      if (autoStoryMode && slideIndex < slides.length - 1) {
+        setTurnDirection('next');
+        sfx.playFlip();
+        setCurrentSlideIndex(prev => prev + 1);
+      } else {
+        setIsNarrating(false);
+        setActiveSentence('');
+      }
+    });
+  };
+
+  // When slide index changes while narrating, automatically read the new slide seamlessly
+  useEffect(() => {
+    if (isNarrating) {
+      const timer = setTimeout(() => {
+        playCurrentSlideNarration(currentSlideIndex);
+      }, 450);
+      return () => clearTimeout(timer);
+    }
+  }, [currentSlideIndex]);
+
+  const toggleNarration = () => {
+    if (isNarrating) {
+      narrator.stop();
+      setIsNarrating(false);
+      setActiveSentence('');
+    } else {
+      setIsNarrating(true);
+      playCurrentSlideNarration(currentSlideIndex);
+    }
+  };
+
+  const handleVoiceSelect = (voiceName) => {
+    setSelectedVoiceName(voiceName);
+    const v = availableVoices.find(item => item.name === voiceName);
+    if (v) {
+      narrator.setVoice(v);
+      if (isNarrating) {
+        playCurrentSlideNarration(currentSlideIndex);
+      }
+    }
+  };
+
+  const handleSpeedChange = (speed) => {
+    setNarratorSpeed(speed);
+    narrator.setRate(speed);
+    if (isNarrating) {
+      playCurrentSlideNarration(currentSlideIndex);
+    }
+  };
+
+  const handlePitchChange = (pitch) => {
+    setNarratorPitch(pitch);
+    narrator.setPitch(pitch);
+    if (isNarrating) {
+      playCurrentSlideNarration(currentSlideIndex);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        backgroundColor: readingTheme === 'parchment' 
+          ? '#f4ece1' 
+          : (readingTheme === 'emerald' ? '#061712' : '#07080d'),
+        color: readingTheme === 'parchment' ? '#29221b' : '#f8fafc',
+        display: 'flex',
+        flexDirection: 'column',
+        userSelect: 'none',
+        overflow: 'hidden',
+        transition: 'background-color 0.4s ease, color 0.4s ease'
+      }}
+    >
+      {/* Top Slide Control Bar */}
+      <div 
+        className="reader-top-bar touch-scroll-x"
+        style={{
+          padding: '0.75rem clamp(0.75rem, 2.5vw, 1.5rem)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: readingTheme === 'parchment' 
+            ? '1px solid rgba(0,0,0,0.08)' 
+            : '1px solid rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(10px)',
+          background: readingTheme === 'parchment' 
+            ? 'rgba(244, 236, 225, 0.9)' 
+            : 'rgba(9, 10, 16, 0.85)',
+          zIndex: 20
+        }}
+      >
+        {/* Left: Book title & progress */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+          <button
+            onClick={() => {
+              narrator.stop();
+              onClose();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.08)',
+              fontSize: '0.84rem',
+              fontWeight: 600,
+              color: 'inherit',
+              flexShrink: 0
+            }}
+          >
+            <ChevronLeft size={18} />
+            <span>Voltar</span>
+          </button>
+
+          <div style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', height: '18px', flexShrink: 0 }} />
+
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <span style={{ 
+              fontWeight: 700, 
+              fontSize: 'clamp(0.82rem, 2.5vw, 0.94rem)',
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: '0.5px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'inline-block',
+              maxWidth: 'clamp(110px, 28vw, 240px)',
+              verticalAlign: 'bottom'
+            }}>
+              {book.title}
+            </span>
+            <span style={{ 
+              fontSize: '0.74rem', 
+              color: 'var(--text-muted)', 
+              marginLeft: '0.5rem',
+              whiteSpace: 'nowrap'
+            }}>
+              {currentSlideIndex + 1}/{slides.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Right: Reading controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
+          {/* Locutor Masculino Primary Button */}
+          <button
+            onClick={toggleNarration}
+            title={isNarrating ? "Pausar Narração em Voz Alta" : "Iniciar Narração com Locutor Masculino HD"}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.45rem 0.95rem',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              background: isNarrating 
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+              color: '#ffffff',
+              boxShadow: isNarrating ? '0 0 20px rgba(239, 68, 68, 0.6)' : '0 2px 10px rgba(139, 92, 246, 0.4)',
+              cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            {isNarrating ? (
+              <>
+                <VolumeX size={16} />
+                <span>Pausar Locutor</span>
+              </>
+            ) : (
+              <>
+                <Headphones size={16} />
+                <span>🎙️ Locutor Masculino</span>
+              </>
+            )}
+          </button>
+
+          {/* Narrator Settings Button */}
+          <button
+            onClick={() => setIsNarratorSettingsOpen(!isNarratorSettingsOpen)}
+            title="Configurações da Narração e Voz"
+            style={{
+              padding: '0.45rem',
+              borderRadius: '8px',
+              background: isNarratorSettingsOpen ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+              color: isNarratorSettingsOpen ? '#fbbf24' : 'inherit',
+              border: isNarratorSettingsOpen ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid transparent'
+            }}
+          >
+            <Settings2 size={16} />
+          </button>
+
+          {/* Narrator Settings Dropdown Popover */}
+          {isNarratorSettingsOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '120%',
+              right: 0,
+              width: '320px',
+              background: 'rgba(15, 18, 30, 0.98)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(139, 92, 246, 0.4)',
+              borderRadius: '16px',
+              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(139, 92, 246, 0.2)',
+              padding: '1.25rem',
+              zIndex: 100,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              animation: 'fadeIn 0.15s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                paddingBottom: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>
+                  <Radio size={16} color="#f59e0b" />
+                  <span>Configurações do Locutor</span>
+                </div>
+                <button
+                  onClick={() => setIsNarratorSettingsOpen(false)}
+                  style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '2px 6px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Story Follow Toggle */}
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                background: 'rgba(255,255,255,0.04)',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '8px'
+              }}>
+                <span>Acompanhar história (virar página sozinho)</span>
+                <input
+                  type="checkbox"
+                  checked={autoStoryMode}
+                  onChange={(e) => setAutoStoryMode(e.target.checked)}
+                />
+              </label>
+
+              {/* Voice Choice */}
+              {availableVoices.length > 0 && (
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}>
+                    Voz do Sistema Detectada:
+                  </label>
+                  <select
+                    value={selectedVoiceName}
+                    onChange={(e) => handleVoiceSelect(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: '#121420',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      padding: '0.45rem',
+                      color: '#ffffff',
+                      fontSize: '0.78rem'
+                    }}
+                  >
+                    {availableVoices.map(v => (
+                      <option key={v.name} value={v.name}>
+                        {v.name.includes('Natural') || v.name.includes('Online') ? '⭐ ' : ''}{v.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Narrator Pacing (Speed) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                  <span>Cadência / Ritmo:</span>
+                  <span style={{ color: '#fbbf24', fontWeight: 700 }}>{narratorSpeed}x</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  {[0.85, 0.95, 1.05, 1.2].map(speed => (
+                    <button
+                      key={speed}
+                      onClick={() => handleSpeedChange(speed)}
+                      style={{
+                        flex: 1,
+                        padding: '0.3rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: narratorSpeed === speed ? 800 : 500,
+                        background: narratorSpeed === speed ? '#8b5cf6' : 'rgba(255,255,255,0.06)',
+                        color: '#fff'
+                      }}
+                    >
+                      {speed === 0.95 ? 'Narrador' : `${speed}x`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Timbre / Tone (Pitch) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                  <span>Timbre (Tom de Locutor):</span>
+                  <span style={{ color: '#fbbf24', fontWeight: 700 }}>
+                    {narratorPitch <= 0.85 ? 'Locutor Grave' : 'Padrão'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  {[
+                    { label: '🎙️ Muito Grave', val: 0.76 },
+                    { label: '🎙️ Locutor Clássico', val: 0.85 },
+                    { label: 'Padrão', val: 1.0 }
+                  ].map(item => (
+                    <button
+                      key={item.val}
+                      onClick={() => handlePitchChange(item.val)}
+                      style={{
+                        flex: 1,
+                        padding: '0.3rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: narratorPitch === item.val ? 800 : 500,
+                        background: narratorPitch === item.val ? '#f59e0b' : 'rgba(255,255,255,0.06)',
+                        color: narratorPitch === item.val ? '#090a10' : '#fff'
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AutoPlay Slideshow */}
+          <button
+            onClick={() => setIsAutoPlay(!isAutoPlay)}
+            title="Apresentação Automática por Tempo"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              background: isAutoPlay ? '#8b5cf6' : 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              boxShadow: isAutoPlay ? '0 0 15px rgba(139, 92, 246, 0.5)' : 'none'
+            }}
+          >
+            {isAutoPlay ? <Pause size={16} /> : <Play size={16} />}
+            <span>Timer ({autoPlayInterval}s)</span>
+          </button>
+
+          {/* Theme switcher */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+            <button
+              onClick={() => setReadingTheme('darknight')}
+              title="Tema Noite Escura"
+              style={{
+                padding: '0.35rem 0.5rem',
+                borderRadius: '6px',
+                background: readingTheme === 'darknight' ? 'rgba(255,255,255,0.2)' : 'transparent',
+                color: 'inherit'
+              }}
+            >
+              <Moon size={15} />
+            </button>
+            <button
+              onClick={() => setReadingTheme('parchment')}
+              title="Tema Pergaminho / Papel"
+              style={{
+                padding: '0.35rem 0.5rem',
+                borderRadius: '6px',
+                background: readingTheme === 'parchment' ? 'rgba(0,0,0,0.15)' : 'transparent',
+                color: 'inherit'
+              }}
+            >
+              <Sun size={15} />
+            </button>
+            <button
+              onClick={() => setReadingTheme('emerald')}
+              title="Tema Esmeralda"
+              style={{
+                padding: '0.35rem 0.5rem',
+                borderRadius: '6px',
+                background: readingTheme === 'emerald' ? 'rgba(16, 185, 129, 0.3)' : 'transparent',
+                color: 'inherit'
+              }}
+            >
+              <Palette size={15} />
+            </button>
+          </div>
+
+          {/* Font Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+            <button
+              onClick={() => setFontSize(prev => Math.max(0.9, prev - 0.1))}
+              title="Diminuir Fonte"
+              style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', fontWeight: 700 }}
+            >
+              A-
+            </button>
+            <button
+              onClick={() => setFontSize(prev => Math.min(1.5, prev + 0.1))}
+              title="Aumentar Fonte"
+              style={{ padding: '0.35rem 0.5rem', fontSize: '0.9rem', fontWeight: 700 }}
+            >
+              A+
+            </button>
+            <button
+              onClick={() => setFontFamily(prev => prev === 'serif' ? 'sans' : 'serif')}
+              title="Alternar Tipografia (Serif / Sans)"
+              style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', fontWeight: 600 }}
+            >
+              {fontFamily === 'serif' ? 'Serif' : 'Sans'}
+            </button>
+          </div>
+
+          {/* Table of Contents Drawer Toggle */}
+          <button
+            onClick={() => setIsTocOpen(!isTocOpen)}
+            title="Sumário de Capítulos e Slides"
+            style={{
+              padding: '0.4rem 0.65rem',
+              borderRadius: '8px',
+              background: isTocOpen ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)',
+              color: isTocOpen ? '#090a10' : '#ffffff'
+            }}
+          >
+            <List size={17} />
+          </button>
+
+          {/* Fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            title="Modo Tela Cheia"
+            style={{
+              padding: '0.4rem 0.65rem',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: 'inherit'
+            }}
+          >
+            {isFullscreen ? <Minimize size={17} /> : <Maximize size={17} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Progress Line */}
+      <div style={{
+        width: '100%',
+        height: '3px',
+        backgroundColor: 'rgba(255, 255, 255, 0.06)'
+      }}>
+        <div style={{
+          width: `${((currentSlideIndex + 1) / slides.length) * 100}%`,
+          height: '100%',
+          background: 'linear-gradient(90deg, #8b5cf6 0%, #f59e0b 100%)',
+          transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }} />
+      </div>
+
+      {/* Main Slide Presentation Stage with Touch Swipe */}
+      <div 
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          flex: 1,
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 'clamp(0.75rem, 2.5vw, 1.5rem)',
+          overflowY: 'auto'
+        }}
+      >
+        {/* Floating Prev Nav Button */}
+        <button
+          className="reader-side-arrow"
+          onClick={handlePrev}
+          disabled={isFirst}
+          style={{
+            left: 'clamp(0.5rem, 2vw, 1.5rem)',
+            background: readingTheme === 'parchment' ? 'rgba(0,0,0,0.06)' : 'rgba(255, 255, 255, 0.06)',
+            border: readingTheme === 'parchment' ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(255, 255, 255, 0.1)',
+            color: 'inherit',
+            cursor: isFirst ? 'not-allowed' : 'pointer',
+            opacity: isFirst ? 0.2 : 0.8
+          }}
+          onMouseEnter={(e) => { if (!isFirst) { e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; e.currentTarget.style.opacity = '1'; } }}
+          onMouseLeave={(e) => { if (!isFirst) { e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; e.currentTarget.style.opacity = '0.8'; } }}
+        >
+          <ChevronLeft size={28} />
+        </button>
+
+        {/* Floating Next Nav Button */}
+        <button
+          className="reader-side-arrow"
+          onClick={handleNext}
+          disabled={isLast}
+          style={{
+            right: 'clamp(0.5rem, 2vw, 1.5rem)',
+            background: readingTheme === 'parchment' ? 'rgba(0,0,0,0.06)' : 'rgba(255, 255, 255, 0.06)',
+            border: readingTheme === 'parchment' ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(255, 255, 255, 0.1)',
+            color: 'inherit',
+            cursor: isLast ? 'not-allowed' : 'pointer',
+            opacity: isLast ? 0.2 : 0.8
+          }}
+          onMouseEnter={(e) => { if (!isLast) { e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; e.currentTarget.style.opacity = '1'; } }}
+          onMouseLeave={(e) => { if (!isLast) { e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; e.currentTarget.style.opacity = '0.8'; } }}
+        >
+          <ChevronRight size={28} />
+        </button>
+
+        {/* Ambient Book Aura */}
+        <div style={{
+          position: 'absolute',
+          width: '750px',
+          height: '550px',
+          borderRadius: '50%',
+          background: readingTheme === 'parchment'
+            ? 'radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }} />
+
+        {/* The Slide Card Container with 3D Page Turn */}
+        <div 
+          key={currentSlideIndex}
+          className={`slide-reader-card ${isOpeningCinematic ? 'book-open-cinematic' : (turnDirection === 'next' ? 'page-turn-next' : 'page-turn-prev')} ${readingTheme === 'parchment' ? 'theme-parchment' : (readingTheme === 'emerald' ? 'theme-emerald' : '')}`}
+          style={{
+            maxWidth: '880px',
+            width: '100%',
+            minHeight: 'clamp(68vh, 74vh, 80vh)',
+            maxHeight: 'clamp(76vh, 84vh, 90vh)',
+            borderRadius: 'clamp(16px, 3vw, 24px)',
+            background: readingTheme === 'parchment' 
+              ? '#fffdf9' 
+              : (readingTheme === 'emerald' ? 'rgba(8, 28, 22, 0.95)' : 'rgba(16, 18, 28, 0.95)'),
+            border: readingTheme === 'parchment' 
+              ? '1px solid #e7ded0' 
+              : '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: readingTheme === 'parchment'
+              ? '0 25px 50px rgba(100, 80, 60, 0.15)'
+              : '0 25px 60px -10px rgba(0, 0, 0, 0.8), 0 0 35px rgba(139, 92, 246, 0.15)',
+            padding: 'clamp(1.25rem, 3.5vw, 3rem)',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: (currentSlide.type === 'cover' || currentSlide.type === 'dedication') ? 'center' : 'flex-start',
+            alignItems: (currentSlide.type === 'cover' || currentSlide.type === 'dedication') ? 'center' : 'stretch',
+            textAlign: (currentSlide.type === 'cover' || currentSlide.type === 'dedication') ? 'center' : 'left',
+            position: 'relative',
+            zIndex: 10
+          }}
+        >
+          {/* Slide Top Badge */}
+          {currentSlide.badge && (
+            <div style={{
+              alignSelf: currentSlide.type === 'cover' ? 'center' : 'flex-start',
+              padding: '0.35rem 0.9rem',
+              borderRadius: '999px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: '#f59e0b',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              marginBottom: '1.5rem'
+            }}>
+              {currentSlide.badge}
+            </div>
+          )}
+
+          {/* Slide Title */}
+          {currentSlide.title && (
+            <h2 style={{
+              fontFamily: 'var(--font-heading)',
+              fontSize: currentSlide.type === 'cover' ? 'clamp(2rem, 4vw, 3rem)' : '1.85rem',
+              fontWeight: 900,
+              lineHeight: 1.25,
+              marginBottom: currentSlide.subtitle ? '0.5rem' : '1.8rem',
+              color: readingTheme === 'parchment' ? '#3e2a14' : '#ffffff',
+              letterSpacing: '0.5px'
+            }}>
+              {currentSlide.title}
+            </h2>
+          )}
+
+          {/* Subtitle */}
+          {currentSlide.subtitle && (
+            <h3 style={{
+              fontSize: '1.15rem',
+              fontWeight: 600,
+              color: readingTheme === 'parchment' ? '#785b3a' : '#c4b5fd',
+              marginBottom: '1.8rem',
+              fontStyle: 'italic'
+            }}>
+              {currentSlide.subtitle}
+            </h3>
+          )}
+
+          {/* Cover Illustrated Art (if cover or image provided) */}
+          {currentSlide.imageUrl && (
+            <div style={{
+              margin: '0.5rem auto 1.8rem auto',
+              maxWidth: currentSlide.type === 'cover' ? '320px' : '450px',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+              border: '2px solid rgba(245, 158, 11, 0.3)'
+            }}>
+              <img
+                src={currentSlide.imageUrl}
+                alt={currentSlide.title}
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              />
+            </div>
+          )}
+
+          {/* Slide Text Content */}
+          {currentSlide.type === 'dedication' ? (
+            <div style={{
+              background: readingTheme === 'parchment' ? 'rgba(0,0,0,0.02)' : 'rgba(255, 255, 255, 0.03)',
+              border: readingTheme === 'parchment' ? '1px dashed #d97706' : '1px dashed rgba(245, 158, 11, 0.45)',
+              borderRadius: '20px',
+              padding: '2.5rem 2rem',
+              maxWidth: '650px',
+              margin: '1rem auto',
+              textAlign: 'center',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
+            }}>
+              <Sparkles size={32} color="#f59e0b" style={{ margin: '0 auto 1.25rem auto' }} />
+              <div style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: `${fontSize * 1.15}rem`,
+                lineHeight: 2,
+                fontStyle: 'italic',
+                color: readingTheme === 'parchment' ? '#3e2a14' : '#f8fafc',
+                whiteSpace: 'pre-line'
+              }}>
+                {currentSlide.content}
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              fontFamily: fontFamily === 'serif' ? 'var(--font-serif)' : 'var(--font-sans)',
+              fontSize: `${fontSize}rem`,
+              lineHeight: 1.85,
+              color: readingTheme === 'parchment' ? '#332921' : '#e2e8f0',
+              whiteSpace: 'pre-line',
+              flex: 1
+            }}>
+              {currentSlide.content?.split('\n\n').map((paragraph, pIdx) => {
+                const isDialogue = paragraph.trim().startsWith('—') || paragraph.trim().startsWith('-');
+                return (
+                  <p 
+                    key={pIdx} 
+                    style={{
+                      marginBottom: '1.25rem',
+                      textIndent: isDialogue ? '0' : '1.8rem',
+                      paddingLeft: isDialogue ? '0.75rem' : '0',
+                      borderLeft: isDialogue ? '2px solid rgba(139, 92, 246, 0.3)' : 'none',
+                      fontWeight: 400
+                    }}
+                  >
+                    {paragraph}
+                  </p>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Real-time Narrator Story Follower Teleprompter */}
+          {isNarrating && activeSentence && (
+            <div style={{
+              position: 'sticky',
+              bottom: '10px',
+              zIndex: 20,
+              background: readingTheme === 'parchment'
+                ? 'linear-gradient(90deg, #fefbf3, #fdf8eb)'
+                : 'linear-gradient(90deg, rgba(22, 18, 45, 0.98), rgba(13, 16, 30, 0.98))',
+              border: readingTheme === 'parchment'
+                ? '1px solid #d97706'
+                : '1px solid rgba(245, 158, 11, 0.5)',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.25)',
+              borderRadius: '16px',
+              padding: '0.85rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              marginTop: '1.5rem',
+              backdropFilter: 'blur(12px)'
+            }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                background: '#f59e0b',
+                boxShadow: '0 0 12px #f59e0b',
+                flexShrink: 0
+              }} />
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: '0.72rem',
+                  color: readingTheme === 'parchment' ? '#b45309' : '#fbbf24',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  marginBottom: '2px'
+                }}>
+                  🎙️ Locutor Oficial • Trecho Atual ({sentenceProgress.current}/{sentenceProgress.total})
+                </div>
+                <div style={{
+                  fontSize: '0.94rem',
+                  color: readingTheme === 'parchment' ? '#2c2520' : '#ffffff',
+                  fontStyle: 'italic',
+                  fontWeight: 600,
+                  lineHeight: 1.4
+                }}>
+                  "{activeSentence}"
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Slide Footer */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderTop: readingTheme === 'parchment' ? '1px solid #e7ded0' : '1px solid rgba(255,255,255,0.06)',
+            paddingTop: '1.25rem',
+            marginTop: '2rem',
+            fontSize: '0.8rem',
+            color: 'var(--text-muted)'
+          }}>
+            <span>Capítulo {currentSlideIndex} • {book.author}</span>
+            <span>Página {currentSlideIndex + 1} de {slides.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Floating Navigation Dots Bar */}
+      <div 
+        className="reader-bottom-nav"
+        style={{
+          padding: '0.85rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.75rem',
+          background: readingTheme === 'parchment' ? 'rgba(244, 236, 225, 0.95)' : 'rgba(9, 10, 16, 0.9)',
+          borderTop: readingTheme === 'parchment' ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.06)',
+          zIndex: 20
+        }}
+      >
+        {/* Navigation Dot Indicators */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          maxWidth: '65vw',
+          overflowX: 'auto',
+          padding: '4px'
+        }}>
+          {slides.map((s, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                sfx.playFlip();
+                setCurrentSlideIndex(idx);
+              }}
+              title={`Slide ${idx + 1}: ${s.title || 'Sem título'}`}
+              style={{
+                width: currentSlideIndex === idx ? '28px' : '8px',
+                height: '8px',
+                borderRadius: '999px',
+                background: currentSlideIndex === idx 
+                  ? '#f59e0b' 
+                  : (readingTheme === 'parchment' ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'),
+                transition: 'all 0.25s ease'
+              }}
+            />
+          ))}
+        </div>
+
+        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', minWidth: '80px', textAlign: 'right' }}>
+          {Math.round(((currentSlideIndex + 1) / slides.length) * 100)}% lido
+        </span>
+      </div>
+
+      {/* Table of Contents Drawer */}
+      {isTocOpen && (
+        <div 
+          className="toc-drawer"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: '360px',
+            maxWidth: '85vw',
+            background: 'rgba(13, 15, 25, 0.97)',
+            backdropFilter: 'blur(20px)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.7)',
+            zIndex: 35,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          {/* Drawer Header */}
+          <div style={{
+            padding: '1.25rem',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>
+                Sumário do Livro
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                {slides.length} slides interativos
+              </p>
+            </div>
+            <button
+              onClick={() => setIsTocOpen(false)}
+              style={{
+                padding: '0.4rem',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.06)',
+                color: 'var(--text-muted)'
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Drawer Items */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
+            {slides.map((slide, sIdx) => {
+              const isActive = currentSlideIndex === sIdx;
+              return (
+                <div
+                  key={sIdx}
+                  onClick={() => {
+                    sfx.playFlip();
+                    setCurrentSlideIndex(sIdx);
+                    setIsTocOpen(false);
+                  }}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: '12px',
+                    marginBottom: '0.4rem',
+                    background: isActive ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(99, 102, 241, 0.2))' : 'rgba(255, 255, 255, 0.03)',
+                    border: isActive ? '1px solid rgba(139, 92, 246, 0.5)' : '1px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)'; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
+                >
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: isActive ? '#f59e0b' : 'rgba(255,255,255,0.08)',
+                    color: isActive ? '#090a10' : '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.78rem',
+                    fontWeight: 800
+                  }}>
+                    {sIdx + 1}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: '0.88rem',
+                      color: isActive ? '#ffffff' : '#cbd5e1',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {slide.title || `Slide ${sIdx + 1}`}
+                    </div>
+                    <div style={{
+                      fontSize: '0.72rem',
+                      color: 'var(--text-muted)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {slide.content?.slice(0, 60)}...
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
