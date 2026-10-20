@@ -1,9 +1,12 @@
 import React from 'react';
-import { X, Play, BookOpen, Layers, Clock, Sparkles, Edit, Calendar, Home, ChevronLeft } from 'lucide-react';
+import { X, Play, BookOpen, Layers, Clock, Sparkles, Edit, Calendar, Home, ChevronLeft, Eye } from 'lucide-react';
 import { sfx } from '../utils/audio';
+import { getActiveReaders } from '../utils/readsTracker';
 
-export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRead, onEdit }) {
+export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRead, onEdit, readsCount }) {
   if (!isOpen || !book) return null;
+  const actualReads = readsCount !== undefined ? readsCount : (book.views || 140);
+  const activeReaders = getActiveReaders(book.id);
 
   return (
     <div style={{
@@ -199,6 +202,59 @@ export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRea
             <p style={{ fontSize: '1rem', color: '#f59e0b', fontWeight: 600, marginBottom: '0.85rem' }}>
               Autor: {book.author}
             </p>
+
+            {/* Painel de Leitores e Acessos */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '14px',
+              padding: '0.75rem 1rem',
+              marginBottom: '1.25rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Eye size={17} color="#38bdf8" />
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Total de Acessos
+                  </div>
+                  <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#ffffff' }}>
+                    {actualReads.toLocaleString('pt-BR')} leituras
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderLeft: '1px solid rgba(255, 255, 255, 0.1)', height: '26px' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: '#4ade80', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Ao Vivo Agora
+                  </div>
+                  <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#ffffff' }}>
+                    {activeReaders} lendo
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderLeft: '1px solid rgba(255, 255, 255, 0.1)', height: '26px' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Layers size={16} color="#c4b5fd" />
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Extensão
+                  </div>
+                  <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#ffffff' }}>
+                    {book.slides?.length || 0} slides
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Dedication box */}
             {book.dedication && (

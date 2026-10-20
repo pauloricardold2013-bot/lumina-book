@@ -23,6 +23,7 @@ export default function LibraryView({
   onReadBook, 
   onOpenDetails, 
   readingProgress = {},
+  bookReads = {},
   activeFolder: propActiveFolder,
   setActiveFolder: propSetActiveFolder,
   onGoHome
@@ -454,6 +455,7 @@ export default function LibraryView({
                     key={book.id}
                     book={book}
                     progress={readingProgress[book.id]?.pct || 0}
+                    readsCount={bookReads[book.id]}
                     onRead={(b) => handleCinematicOpen(b, 0)}
                     onDetails={onOpenDetails}
                   />
@@ -577,6 +579,7 @@ export default function LibraryView({
                       key={book.id}
                       book={book}
                       progress={readingProgress[book.id]?.pct || 0}
+                      readsCount={bookReads[book.id]}
                       onRead={(b) => handleCinematicOpen(b, 0)}
                       onDetails={onOpenDetails}
                     />

@@ -6,11 +6,13 @@ import BookDetailModal from './components/BookDetailModal';
 import DonationModal from './components/DonationModal';
 import ParticleBackground from './components/ParticleBackground';
 import { DEFAULT_BOOKS, DEFAULT_COLLECTIONS } from './data/defaultBooks';
+import { INITIAL_READS_MAP } from './utils/readsTracker';
 import { Heart } from 'lucide-react';
 
 const BOOKS_STORAGE_KEY = 'lumina_books_db_v8';
 const COLLECTIONS_STORAGE_KEY = 'lumina_collections_db_v8';
 const PROGRESS_STORAGE_KEY = 'lumina_reading_progress_v7';
+const READS_STORAGE_KEY = 'lumina_book_reads_counter_v1';
 
 export default function App() {
   // Collections state
@@ -86,6 +88,20 @@ export default function App() {
     return {};
   });
 
+  // Book reads / accesses counter state
+  const [bookReads, setBookReads] = useState(() => {
+    try {
+      const saved = localStorage.getItem(READS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...INITIAL_READS_MAP, ...parsed };
+      }
+    } catch (e) {
+      console.error('Error loading book reads:', e);
+    }
+    return INITIAL_READS_MAP;
+  });
+
   // Navigation & Modals state
   const [readingBook, setReadingBook] = useState(null);
   const [startSlideIndex, setStartSlideIndex] = useState(0);
@@ -143,6 +159,14 @@ export default function App() {
     }
   }, [readingProgress]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(READS_STORAGE_KEY, JSON.stringify(bookReads));
+    } catch (e) {
+      console.error('Error saving book reads:', e);
+    }
+  }, [bookReads]);
+
   const handleSaveProgress = (bookId, pct, slideIdx) => {
     setReadingProgress(prev => ({
       ...prev,
@@ -153,6 +177,15 @@ export default function App() {
   const handleOpenReader = (book, slideIdx = 0) => {
     setReadingBook(book);
     setStartSlideIndex(slideIdx);
+    if (book && book.id) {
+      setBookReads(prev => {
+        const currentCount = prev[book.id] ?? INITIAL_READS_MAP[book.id] ?? 120;
+        return {
+          ...prev,
+          [book.id]: currentCount + 1
+        };
+      });
+    }
   };
 
   return (
@@ -175,6 +208,7 @@ export default function App() {
           books={books}
           collections={collections}
           readingProgress={readingProgress}
+          bookReads={bookReads}
           activeFolder={activeFolder}
           setActiveFolder={setActiveFolder}
           onGoHome={handleGoHome}
@@ -189,6 +223,7 @@ export default function App() {
         <SlideReader
           book={readingBook}
           initialSlide={startSlideIndex}
+          readsCount={readingBook ? (bookReads[readingBook.id] ?? INITIAL_READS_MAP[readingBook.id] ?? 120) : undefined}
           onClose={handleGoBack}
           onGoHome={handleGoHome}
           onSaveProgress={handleSaveProgress}
@@ -199,6 +234,7 @@ export default function App() {
       <BookDetailModal
         book={detailsBook}
         isOpen={Boolean(detailsBook)}
+        readsCount={detailsBook ? (bookReads[detailsBook.id] ?? INITIAL_READS_MAP[detailsBook.id] ?? 120) : undefined}
         onClose={() => setDetailsBook(null)}
         onGoHome={handleGoHome}
         onRead={(book, slideIdx = 0) => handleOpenReader(book, slideIdx)}

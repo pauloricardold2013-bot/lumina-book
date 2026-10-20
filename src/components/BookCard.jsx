@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Play, BookOpen, Layers, Edit2, Trash2, Info, Eye } from 'lucide-react';
 import { sfx } from '../utils/audio';
+import { formatReads, getActiveReaders } from '../utils/readsTracker';
 
-export default function BookCard({ book, onRead, onEdit, onDelete, onDetails, progress = 0 }) {
+export default function BookCard({ book, onRead, onEdit, onDelete, onDetails, progress = 0, readsCount }) {
   const [isHovered, setIsHovered] = useState(false);
+  const actualReads = readsCount !== undefined ? readsCount : (book.views || 140);
+  const activeReaders = getActiveReaders(book.id);
 
   return (
     <div
@@ -100,6 +103,36 @@ export default function BookCard({ book, onRead, onEdit, onDelete, onDetails, pr
           {book.slides?.length || 0} slides
         </div>
 
+        {/* Contador de Leituras e Leitores Ativos Badge */}
+        <div style={{
+          position: 'absolute',
+          bottom: '12px',
+          left: '12px',
+          background: 'rgba(9, 10, 16, 0.88)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          padding: '0.25rem 0.65rem',
+          borderRadius: '999px',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          color: '#f8fafc',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          zIndex: 2,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+        }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#38bdf8' }}>
+            <Eye size={12} />
+            <span>{formatReads(actualReads)} leituras</span>
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#4ade80' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
+            <span>{activeReaders} lendo</span>
+          </span>
+        </div>
+
         {/* Hover Read Overlay */}
         <div style={{
           position: 'absolute',
@@ -151,14 +184,21 @@ export default function BookCard({ book, onRead, onEdit, onDelete, onDetails, pr
           {book.title}
         </h3>
 
-        <p style={{
-          fontSize: '0.85rem',
-          color: '#a78bfa',
-          fontWeight: 600,
-          marginBottom: '0.75rem'
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.82rem',
+          marginBottom: '0.65rem'
         }}>
-          {book.author}
-        </p>
+          <span style={{ color: '#a78bfa', fontWeight: 600 }}>
+            {book.author}
+          </span>
+          <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <Eye size={12} />
+            {actualReads.toLocaleString('pt-BR')} acessos
+          </span>
+        </div>
 
         <p style={{
           fontSize: '0.85rem',

@@ -22,12 +22,13 @@ import {
   Settings2, 
   Headphones, 
   Radio,
-  Home 
+  Home,
+  Eye 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sfx, narrator } from '../utils/audio';
 
-export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, initialSlide = 0 }) {
+export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, initialSlide = 0, readsCount }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(initialSlide);
   const [readingTheme, setReadingTheme] = useState('darknight'); // 'darknight' | 'parchment' | 'emerald'
   const [fontSize, setFontSize] = useState(1.1); // rem
@@ -434,6 +435,21 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
             }}>
               {currentSlideIndex + 1}/{slides.length}
             </span>
+            {readsCount && (
+              <span style={{ 
+                fontSize: '0.72rem', 
+                color: '#38bdf8', 
+                marginLeft: '0.55rem',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem'
+              }}>
+                <Eye size={12} />
+                {readsCount.toLocaleString('pt-BR')} leituras
+              </span>
+            )}
           </div>
         </div>
 
