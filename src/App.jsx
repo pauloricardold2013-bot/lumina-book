@@ -8,7 +8,7 @@ import ParticleBackground from './components/ParticleBackground';
 import { DEFAULT_BOOKS, DEFAULT_COLLECTIONS } from './data/defaultBooks';
 import { Heart } from 'lucide-react';
 
-const BOOKS_STORAGE_KEY = 'lumina_books_db_v7';
+const BOOKS_STORAGE_KEY = 'lumina_books_db_v8';
 const COLLECTIONS_STORAGE_KEY = 'lumina_collections_db_v7';
 const PROGRESS_STORAGE_KEY = 'lumina_reading_progress_v7';
 
@@ -30,24 +30,33 @@ export default function App() {
   // Books state persisted in localStorage
   const [books, setBooks] = useState(() => {
     try {
-      const saved = localStorage.getItem(BOOKS_STORAGE_KEY) || localStorage.getItem('lumina_books_db_v5');
+      const saved = localStorage.getItem(BOOKS_STORAGE_KEY) || localStorage.getItem('lumina_books_db_v7');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const loaded = parsed.map(b => {
-            if (b.id === 'reino-magico-jhully-vol2' || b.id === 'cronicas-do-cosmos-vol2') {
+            let bookObj = { ...b };
+            // Remove dedication if related to Pisa
+            if (bookObj.dedication && /pisa/i.test(bookObj.dedication)) {
+              delete bookObj.dedication;
+            }
+            if (Array.isArray(bookObj.slides)) {
+              bookObj.slides = bookObj.slides.filter(s => s.type !== 'dedication' && (!s.content || !/pisa/i.test(s.content)));
+            }
+
+            if (bookObj.id === 'reino-magico-jhully-vol2' || bookObj.id === 'cronicas-do-cosmos-vol2') {
               return {
-                ...b,
-                category: b.id === 'cronicas-do-cosmos-vol2' ? 'Ficção Científica' : b.category,
-                title: b.title.replace(/Livro 2/gi, 'Prólogo'),
-                slides: (b.slides || []).map(s => ({
+                ...bookObj,
+                category: bookObj.id === 'cronicas-do-cosmos-vol2' ? 'Ficção Científica' : bookObj.category,
+                title: bookObj.title.replace(/Livro 2/gi, 'Prólogo'),
+                slides: (bookObj.slides || []).map(s => ({
                   ...s,
                   subtitle: s.subtitle ? s.subtitle.replace(/Volume 2|Livro 2/gi, 'Prólogo') : s.subtitle,
                   badge: s.badge === 'Volume 2' ? 'Prólogo' : s.badge
                 }))
               };
             }
-            return b;
+            return bookObj;
           });
 
           // Ensure any newly added books from DEFAULT_BOOKS exist in the list

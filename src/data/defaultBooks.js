@@ -51,7 +51,6 @@ Ao lado de um feiticeiro que ainda não conhece todo seu poder, de uma fantasmin
 
 Porque às vezes… o que escrevemos pode se tornar real.
 E salvar um reino mágico pode começar com uma única palavra.`,
-    dedication: "Dedico esse Livro a Menina que deu Vida e Inspiração ao Livro Jhully: Dhyésika Pisa",
     createdAt: "2026-09-28",
     views: 142,
     slides: [
@@ -63,17 +62,6 @@ E salvar um reino mágico pode começar com uma única palavra.`,
         content: "Uma jornada inesquecível pelo poder da imaginação, da coragem e das escolhas do coração.",
         imageUrl: "./covers/reino_magico_oficial_jhully.jpg",
         badge: "Edição Especial Digital"
-      },
-      {
-        id: "slide-dedication",
-        type: "dedication",
-        title: "✨ Dedicatória Oficial",
-        subtitle: "Por Paulo Ricardo Cordova",
-        content: `Dedico esse Livro a Menina que deu Vida e Inspiração ao Livro Jhully:
-Dhyéssyka Pisa.
-
-"Pois toda história que toca a alma nasce no brilho dos olhos e no coração daqueles que nos inspiram a sonhar e a criar novos mundos."`,
-        badge: "Dedicatória"
       },
       {
         id: "slide-2",
@@ -458,7 +446,6 @@ Do lado de fora da janela, o céu noturno do reino ressoava com um zumbido grave
 Junto com seus amigos — o feiticeiro Eron, a fantasminha Isadora, o poderoso coelho Dicky e o próprio Morrath, um antigo guardião — ela embarca em uma jornada épica para salvar o Véu dos Mundos da destruição. Enfrentando perigos sombrios, desafios emocionantes e descobrindo o verdadeiro poder da amizade, Jhully aprende que a coragem e a esperança são as magias mais fortes que existem.
 
 — Autor: Paulo Ricardo Cordova`,
-    dedication: "Dedico esse Livro a Menina que deu Vida e Inspiração ao Livro Jhully: Dhyéssyka Pisa",
     createdAt: "2026-10-02",
     views: 180,
     slides: [
@@ -470,17 +457,6 @@ Junto com seus amigos — o feiticeiro Eron, a fantasminha Isadora, o poderoso c
         content: "Quando as fronteiras do invisível se enfraquecem, a verdade deve ser buscada além do conhecido.",
         imageUrl: "./covers/jhully_veu_dos_mundos.jpg",
         badge: "Novo Lançamento Oficial"
-      },
-      {
-        id: "veu-dedication",
-        type: "dedication",
-        title: "✨ Dedicatória Oficial",
-        subtitle: "Por Paulo Ricardo Cordova",
-        content: `Dedico esse Livro a Menina que deu Vida e Inspiração ao Livro Jhully:
-Dhyéssyka Pisa.
-
-"Pois toda história que toca a alma nasce no brilho dos olhos e no coração daqueles que nos inspiram a sonhar e a criar novos mundos."`,
-        badge: "Dedicatória"
       },
       {
         id: "veu-s2",
