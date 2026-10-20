@@ -1,8 +1,8 @@
 import React from 'react';
-import { X, Play, BookOpen, Layers, Clock, Sparkles, Edit, Calendar } from 'lucide-react';
+import { X, Play, BookOpen, Layers, Clock, Sparkles, Edit, Calendar, Home, ChevronLeft } from 'lucide-react';
 import { sfx } from '../utils/audio';
 
-export default function BookDetailModal({ book, isOpen, onClose, onRead, onEdit }) {
+export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRead, onEdit }) {
   if (!isOpen || !book) return null;
 
   return (
@@ -15,7 +15,7 @@ export default function BookDetailModal({ book, isOpen, onClose, onRead, onEdit 
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1.5rem',
+      padding: '1rem',
       overflowY: 'auto'
     }}>
       <div style={{
@@ -33,27 +33,80 @@ export default function BookDetailModal({ book, isOpen, onClose, onRead, onEdit 
       }}>
         {/* Top Header */}
         <div style={{
-          padding: '1.25rem 1.75rem',
+          padding: '1rem 1.25rem',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: 'rgba(255, 255, 255, 0.02)',
+          gap: '0.65rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <BookOpen size={20} color="#f59e0b" />
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: '#fff', fontSize: '1.05rem' }}>
-              Detalhes da Obra
-            </span>
+          {/* Left: Voltar & Casinha & Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <button
+              onClick={() => {
+                sfx.playFlip();
+                onClose();
+              }}
+              title="Voltar à tela anterior"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '0.4rem 0.75rem',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <ChevronLeft size={16} />
+              <span>Voltar</span>
+            </button>
+
+            <button
+              onClick={() => {
+                sfx.playChime();
+                if (onGoHome) onGoHome();
+                else onClose();
+              }}
+              title="Página Principal (Início)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.4rem 0.6rem',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(245, 158, 11, 0.2))',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                color: '#fbbf24',
+                cursor: 'pointer'
+              }}
+            >
+              <Home size={16} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginLeft: '0.35rem' }}>
+              <BookOpen size={18} color="#f59e0b" />
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: '#fff', fontSize: '1rem' }}>
+                Detalhes da Obra
+              </span>
+            </div>
           </div>
 
+          {/* Right: Close X button */}
           <button
             onClick={onClose}
+            title="Fechar"
             style={{
               padding: '0.45rem',
               borderRadius: '8px',
               background: 'rgba(255, 255, 255, 0.06)',
-              color: 'var(--text-muted)'
+              color: 'var(--text-muted)',
+              cursor: 'pointer'
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}

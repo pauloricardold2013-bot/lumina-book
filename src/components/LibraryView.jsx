@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   Flame,
   Compass,
-  ArrowRight
+  ArrowRight,
+  Home
 } from 'lucide-react';
 import BookCard from './BookCard';
 import CollectionCard from './CollectionCard';
@@ -21,11 +22,16 @@ export default function LibraryView({
   collections = [],
   onReadBook, 
   onOpenDetails, 
-  readingProgress = {} 
+  readingProgress = {},
+  activeFolder: propActiveFolder,
+  setActiveFolder: propSetActiveFolder,
+  onGoHome
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('Todos');
-  const [activeFolder, setActiveFolder] = useState(null); // active collection object or null
+  const [internalActiveFolder, setInternalActiveFolder] = useState(null);
+  const activeFolder = propActiveFolder !== undefined ? propActiveFolder : internalActiveFolder;
+  const setActiveFolder = propSetActiveFolder || setInternalActiveFolder;
   const [openingBookId, setOpeningBookId] = useState(null);
 
   // List of all genres + "Todos"
@@ -141,33 +147,63 @@ export default function LibraryView({
               marginBottom: '2rem'
             }}
           >
-            {/* Back button */}
-            <button
-              onClick={() => {
-                sfx.playFlip();
-                setActiveFolder(null);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.5rem 1rem',
-                borderRadius: '12px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#cbd5e1',
-                fontSize: '0.88rem',
-                fontWeight: 600,
-                marginBottom: '1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#cbd5e1'; }}
-            >
-              <ChevronLeft size={18} />
-              Voltar para Todas as Pastas das Coleções
-            </button>
+            {/* Navigation buttons: Voltar e Casinha */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  sfx.playFlip();
+                  setActiveFolder(null);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: '#cbd5e1',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#cbd5e1'; }}
+              >
+                <ChevronLeft size={18} />
+                Voltar às Coleções
+              </button>
+
+              <button
+                onClick={() => {
+                  sfx.playChime();
+                  if (onGoHome) onGoHome();
+                  else setActiveFolder(null);
+                }}
+                title="Ir para a Página Principal"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(245, 158, 11, 0.2))',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  color: '#fbbf24',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.2)'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                <Home size={17} />
+                Página Principal (Início)
+              </button>
+            </div>
 
             <div style={{ display: 'flex', gap: 'clamp(1rem, 3vw, 2.5rem)', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{

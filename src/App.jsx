@@ -91,6 +91,32 @@ export default function App() {
   const [startSlideIndex, setStartSlideIndex] = useState(0);
   const [detailsBook, setDetailsBook] = useState(null);
   const [isDonationOpen, setIsDonationOpen] = useState(false);
+  const [activeFolder, setActiveFolder] = useState(null);
+
+  // Global navigation helpers
+  const canGoBack = Boolean(readingBook || detailsBook || isDonationOpen || activeFolder);
+
+  const handleGoBack = () => {
+    if (readingBook) {
+      setReadingBook(null);
+    } else if (detailsBook) {
+      setDetailsBook(null);
+    } else if (isDonationOpen) {
+      setIsDonationOpen(false);
+    } else if (activeFolder) {
+      setActiveFolder(null);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleGoHome = () => {
+    setReadingBook(null);
+    setDetailsBook(null);
+    setIsDonationOpen(false);
+    setActiveFolder(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Sync to localStorage
   useEffect(() => {
@@ -138,6 +164,9 @@ export default function App() {
       <Navbar
         onOpenDonate={() => setIsDonationOpen(true)}
         booksCount={books.length}
+        onGoBack={handleGoBack}
+        onGoHome={handleGoHome}
+        canGoBack={canGoBack}
       />
 
       {/* Main View Router */}
@@ -146,6 +175,9 @@ export default function App() {
           books={books}
           collections={collections}
           readingProgress={readingProgress}
+          activeFolder={activeFolder}
+          setActiveFolder={setActiveFolder}
+          onGoHome={handleGoHome}
           onReadBook={(book, slideIdx = 0) => handleOpenReader(book, slideIdx)}
           onOpenDetails={(book) => setDetailsBook(book)}
         />
@@ -157,7 +189,8 @@ export default function App() {
         <SlideReader
           book={readingBook}
           initialSlide={startSlideIndex}
-          onClose={() => setReadingBook(null)}
+          onClose={handleGoBack}
+          onGoHome={handleGoHome}
           onSaveProgress={handleSaveProgress}
         />
       )}
@@ -167,6 +200,7 @@ export default function App() {
         book={detailsBook}
         isOpen={Boolean(detailsBook)}
         onClose={() => setDetailsBook(null)}
+        onGoHome={handleGoHome}
         onRead={(book, slideIdx = 0) => handleOpenReader(book, slideIdx)}
       />
 

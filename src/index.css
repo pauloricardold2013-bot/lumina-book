@@ -477,6 +477,14 @@ html, body {
     display: none !important;
   }
 
+  .navbar-btn-text {
+    display: none !important;
+  }
+
+  .navbar-home-label {
+    display: none !important;
+  }
+
   .reader-book-title-header {
     display: none !important; /* Mostra apenas Slide X/Y no celular */
   }

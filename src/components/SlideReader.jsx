@@ -21,12 +21,13 @@ import {
   Mic, 
   Settings2, 
   Headphones, 
-  Radio 
+  Radio,
+  Home 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sfx, narrator } from '../utils/audio';
 
-export default function SlideReader({ book, onClose, onSaveProgress, initialSlide = 0 }) {
+export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, initialSlide = 0 }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(initialSlide);
   const [readingTheme, setReadingTheme] = useState('darknight'); // 'darknight' | 'parchment' | 'emerald'
   const [fontSize, setFontSize] = useState(1.1); // rem
@@ -352,7 +353,8 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
               narrator.stop();
               onClose();
             }}
-            title="Voltar à Biblioteca"
+            title="Voltar à tela ou aba anterior"
+            className="reader-back-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -363,11 +365,45 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
               fontSize: '0.84rem',
               fontWeight: 600,
               color: 'inherit',
-              flexShrink: 0
+              flexShrink: 0,
+              cursor: 'pointer'
             }}
           >
             <ChevronLeft size={18} />
             <span className="reader-back-text">Voltar</span>
+          </button>
+
+          {/* Botão Casinha: Ir para a Página Principal */}
+          <button
+            onClick={() => {
+              narrator.stop();
+              if (onGoHome) onGoHome();
+              else onClose();
+            }}
+            title="Página Principal (Início)"
+            className="reader-home-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.4rem 0.55rem',
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.08)',
+              color: '#fbbf24',
+              flexShrink: 0,
+              cursor: 'pointer',
+              border: '1px solid rgba(245, 158, 11, 0.25)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)';
+              e.currentTarget.style.borderColor = '#fbbf24';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.25)';
+            }}
+          >
+            <Home size={17} />
           </button>
 
           <div style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', height: '18px', flexShrink: 0 }} />
