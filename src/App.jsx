@@ -9,14 +9,14 @@ import { DEFAULT_BOOKS, DEFAULT_COLLECTIONS } from './data/defaultBooks';
 import { Heart } from 'lucide-react';
 
 const BOOKS_STORAGE_KEY = 'lumina_books_db_v8';
-const COLLECTIONS_STORAGE_KEY = 'lumina_collections_db_v7';
+const COLLECTIONS_STORAGE_KEY = 'lumina_collections_db_v8';
 const PROGRESS_STORAGE_KEY = 'lumina_reading_progress_v7';
 
 export default function App() {
   // Collections state
   const [collections, setCollections] = useState(() => {
     try {
-      const saved = localStorage.getItem(COLLECTIONS_STORAGE_KEY) || localStorage.getItem('lumina_collections_db_v6');
+      const saved = localStorage.getItem(COLLECTIONS_STORAGE_KEY) || localStorage.getItem('lumina_collections_db_v7');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
