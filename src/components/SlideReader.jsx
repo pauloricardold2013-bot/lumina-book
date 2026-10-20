@@ -1212,15 +1212,32 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                     </option>
                   ))}
                 </select>
-                <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                <p style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.45rem', lineHeight: 1.5 }}>
                   {selectedVoiceName === 'google_mobile'
                     ? '📱 A mesma locução suave do celular, reproduzida com máxima nitidez no Windows e celular.'
                     : (selectedVoiceName === 'male_studio'
-                        ? '🎙️ Locutor Masculino em altíssima qualidade com voz aveludada e realista de audiolivro.'
+                        ? '🎙️ Locutor Masculino em frequência grave de barítono (115Hz), encorpada e realista de audiolivro.'
                         : (selectedVoiceName.toLowerCase().includes('antonio') 
                             ? '⭐ Voz oficial da Microsoft Edge com inteligência artificial neural.' 
                             : '🎙️ Locução límpida do sistema.'))}
                 </p>
+                {selectedVoiceName === 'male_studio' && (
+                  <div style={{
+                    marginTop: '0.55rem',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '10px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    fontSize: '0.72rem',
+                    color: '#e2e8f0',
+                    lineHeight: 1.5
+                  }}>
+                    <strong style={{ color: '#fbbf24', display: 'block', marginBottom: '2px' }}>
+                      💡 Dica para celular Android:
+                    </strong>
+                    O Android disponibiliza gratuitamente a <em>Voz 2 (Masculina nativa)</em> da Google em: <strong>Configurações &gt; Acessibilidade &gt; Conversão de texto em voz &gt; Engrenagem Google &gt; Instalar dados de voz &gt; Português &gt; Voz 2</strong>. Ao baixar, o Lumina Book a adota automaticamente!
+                  </div>
+                )}
               </div>
             )}
 

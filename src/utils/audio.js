@@ -151,12 +151,32 @@ class SpeechNarrator {
     }) || pt.find(v => v.lang.includes('BR')) || pt[0] || null;
   }
 
-  getBestBaseVoice() {
+  getRealMaleVoice() {
     const pt = this.getSystemPtVoices();
-    return pt.find(v => (v.name || '').toLowerCase().includes('google')) ||
-      pt.find(v => (v.name || '').toLowerCase().includes('daniel')) ||
-      pt.find(v => v.lang.includes('BR')) ||
-      pt[0] || null;
+    // Procura vozes genuinamente masculinas por nome ou identificador oficial (Windows, Android, iOS, Samsung)
+    return pt.find(v => {
+      const n = (v.name || '').toLowerCase();
+      return (
+        n.includes('antonio') ||
+        n.includes('daniel') ||
+        n.includes('felipe') ||
+        n.includes('fabio') ||
+        n.includes('fábio') ||
+        n.includes('ricardo') ||
+        n.includes('thiago') ||
+        n.includes('david') ||
+        n.includes('male') ||
+        n.includes('homem') ||
+        n.includes('masculin') ||
+        n.includes('afp') || // Google Android Voz 2 (Masculina)
+        n.includes('ptd') || // Google Android Voz 3 (Masculina)
+        n.includes('smta')   // Samsung TTS Voz Masculina
+      );
+    }) || null;
+  }
+
+  getBestBaseVoice() {
+    return this.getRealMaleVoice() || this.getGoogleVoice();
   }
 
   loadVoices() {
@@ -174,6 +194,11 @@ class SpeechNarrator {
 
   getAvailableVoices() {
     const pt = this.getSystemPtVoices();
+    const realMale = this.getRealMaleVoice();
+    const maleLabel = realMale 
+      ? `🎙️ Locutor Masculino (${realMale.name.split('-')[0].trim()})`
+      : '🎙️ Locutor Masculino (Estúdio Barítono)';
+
     const list = [
       {
         id: 'google_mobile',
@@ -184,7 +209,7 @@ class SpeechNarrator {
       {
         id: 'male_studio',
         name: 'male_studio',
-        displayName: '🎙️ Locutor Masculino (Estúdio Realista)',
+        displayName: maleLabel,
         shortName: 'Locutor Masculino'
       }
     ];
@@ -230,12 +255,22 @@ class SpeechNarrator {
     if (!item) return '📱 Google Voz Natural (A mesma do Celular)';
     if (typeof item === 'string') {
       if (item === 'google_mobile') return '📱 Google Voz Natural (A mesma do Celular)';
-      if (item === 'male_studio') return '🎙️ Locutor Masculino (Estúdio Realista)';
+      if (item === 'male_studio') {
+        const realMale = this.getRealMaleVoice();
+        return realMale 
+          ? `🎙️ Locutor Masculino (${realMale.name.split('-')[0].trim()})`
+          : '🎙️ Locutor Masculino (Estúdio Barítono)';
+      }
       return item;
     }
     if (item.displayName) return item.displayName;
     if (item.id === 'google_mobile') return '📱 Google Voz Natural (A mesma do Celular)';
-    if (item.id === 'male_studio') return '🎙️ Locutor Masculino (Estúdio Realista)';
+    if (item.id === 'male_studio') {
+      const realMale = this.getRealMaleVoice();
+      return realMale 
+        ? `🎙️ Locutor Masculino (${realMale.name.split('-')[0].trim()})`
+        : '🎙️ Locutor Masculino (Estúdio Barítono)';
+    }
     return item.name || 'Locutor HD';
   }
 
@@ -284,15 +319,33 @@ class SpeechNarrator {
   configureUtterance(utterance) {
     utterance.lang = 'pt-BR';
 
-    // Perfil 1: Locutor Masculino Estúdio (Voz encorpada, aveludada e realista em qualquer navegador/celular)
+    // Perfil 1: Locutor Masculino
     if (this.selectedVoiceIdentifier === 'male_studio') {
-      const best = this.getBestBaseVoice();
-      if (best) {
-        utterance.voice = best;
-        if (best.lang) utterance.lang = best.lang;
+      const realMale = this.getRealMaleVoice();
+      if (realMale) {
+        // Voz masculina genuína encontrada no dispositivo (Antonio, Daniel, Felipe, Google Voz 2/3, Samsung)
+        utterance.voice = realMale;
+        if (realMale.lang) utterance.lang = realMale.lang;
+        const lower = (realMale.name || '').toLowerCase();
+        if (lower.includes('online') || lower.includes('natural')) {
+          utterance.rate = 1.0;
+          utterance.pitch = 1.0;
+        } else {
+          utterance.rate = 0.94;
+          utterance.pitch = 1.0;
+        }
+        return;
       }
-      utterance.pitch = 0.83; // Tom masculino profundo e natural
-      utterance.rate = 0.94;  // Cadência de leitura de audiolivro
+
+      // Se o dispositivo só possuir vozes femininas instaladas (padrão de fábrica de alguns celulares):
+      // Frequência de 0.56 desloca a voz para a região grave masculina de barítono (110Hz-125Hz)
+      const base = this.getGoogleVoice();
+      if (base) {
+        utterance.voice = base;
+        if (base.lang) utterance.lang = base.lang;
+      }
+      utterance.pitch = 0.56; // Transforma a frequência na escala masculina
+      utterance.rate = 0.88;  // Cadência mais pausada e encorpada de locutor
       return;
     }
 
