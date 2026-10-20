@@ -48,12 +48,12 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
   const [narratorSpeed, setNarratorSpeed] = useState(narrator.rate || 0.96);
   const [narratorPitch, setNarratorPitch] = useState(narrator.pitch || 1.0);
   const [availableVoices, setAvailableVoices] = useState([]);
-  const [selectedVoiceName, setSelectedVoiceName] = useState('');
+  const [selectedVoiceName, setSelectedVoiceName] = useState(narrator.selectedVoiceIdentifier || 'google_mobile');
   const [isTestingVoice, setIsTestingVoice] = useState(false);
 
   // Obter voz atual e nomes amigáveis para botões e menus
   const currentVoiceObj = useMemo(() => {
-    return availableVoices.find(v => v.name === selectedVoiceName) || narrator.selectedVoice;
+    return availableVoices.find(v => v.id === selectedVoiceName || v.name === selectedVoiceName) || availableVoices[0] || null;
   }, [availableVoices, selectedVoiceName]);
 
   const shortVoiceName = useMemo(() => {
@@ -156,8 +156,8 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
     const loadVoicesList = () => {
       const v = narrator.getAvailableVoices();
       setAvailableVoices(v);
-      if (narrator.selectedVoice) {
-        setSelectedVoiceName(narrator.selectedVoice.name);
+      if (narrator.selectedVoiceIdentifier) {
+        setSelectedVoiceName(narrator.selectedVoiceIdentifier);
       }
     };
 
@@ -256,14 +256,11 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
     }
   };
 
-  const handleVoiceSelect = (voiceName) => {
-    setSelectedVoiceName(voiceName);
-    const v = availableVoices.find(item => item.name === voiceName);
-    if (v) {
-      narrator.setVoice(v);
-      if (isNarrating) {
-        playCurrentSlideNarration(currentSlideIndex);
-      }
+  const handleVoiceSelect = (voiceId) => {
+    setSelectedVoiceName(voiceId);
+    narrator.setVoice(voiceId);
+    if (isNarrating) {
+      playCurrentSlideNarration(currentSlideIndex);
     }
   };
 
@@ -1210,17 +1207,19 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                   }}
                 >
                   {availableVoices.map(v => (
-                    <option key={v.name} value={v.name}>
+                    <option key={v.id || v.name} value={v.id || v.name}>
                       {narrator.getVoiceDisplayName(v)}
                     </option>
                   ))}
                 </select>
                 <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                  {selectedVoiceName.includes('Google') || selectedVoiceName.includes('pt-br-x-')
-                    ? '📱 Esta é a mesma locução suave utilizada nos celulares Android.'
-                    : (selectedVoiceName.includes('Antonio') 
-                        ? '⭐ Voz Studio Ultra-Realista IA oficial da Microsoft.' 
-                        : '🎙️ Locutor com cadência límpida e entonação natural.')}
+                  {selectedVoiceName === 'google_mobile'
+                    ? '📱 A mesma locução suave do celular, reproduzida com máxima nitidez no Windows e celular.'
+                    : (selectedVoiceName === 'male_studio'
+                        ? '🎙️ Locutor Masculino em altíssima qualidade com voz aveludada e realista de audiolivro.'
+                        : (selectedVoiceName.toLowerCase().includes('antonio') 
+                            ? '⭐ Voz oficial da Microsoft Edge com inteligência artificial neural.' 
+                            : '🎙️ Locução límpida do sistema.'))}
                 </p>
               </div>
             )}

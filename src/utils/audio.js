@@ -87,16 +87,16 @@ class SpeechNarrator {
     this.isPaused = false;
     this.queue = [];
     this.currentChunkIndex = 0;
+    this.selectedVoiceIdentifier = 'google_mobile'; // Padrão: Voz amada do celular
     this.selectedVoice = null;
     this.rate = 0.96; // Cadência ideal de audiolivro
-    this.pitch = 1.0; // Frequência natural humana (evita efeito robótico)
+    this.pitch = 1.0;
     this.onStateChange = null;
     this.onSentenceChange = null;
     this.onSlideEnd = null;
     this.heartbeatTimer = null;
     this.isSamplePlaying = false;
 
-    // Carregar preferências salvas do usuário
     this.loadSavedPreferences();
 
     if (typeof window !== 'undefined' && this.synth) {
@@ -112,152 +112,162 @@ class SpeechNarrator {
   loadSavedPreferences() {
     try {
       if (typeof window === 'undefined') return;
-      const saved = localStorage.getItem('lumina_narrator_settings_v3');
+      const saved = localStorage.getItem('lumina_narrator_settings_v4');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.rate) this.rate = parsed.rate;
         if (parsed.pitch) this.pitch = parsed.pitch;
-        this.savedVoiceName = parsed.voiceName || null;
+        if (parsed.voiceIdentifier) this.selectedVoiceIdentifier = parsed.voiceIdentifier;
       }
     } catch {
-      // Ignorar erro de leitura do localStorage
+      // Ignorar erro
     }
   }
 
   savePreferences() {
     try {
       if (typeof window === 'undefined') return;
-      localStorage.setItem('lumina_narrator_settings_v3', JSON.stringify({
-        voiceName: this.selectedVoice?.name || '',
+      localStorage.setItem('lumina_narrator_settings_v4', JSON.stringify({
+        voiceIdentifier: this.selectedVoiceIdentifier || 'google_mobile',
         rate: this.rate,
         pitch: this.pitch
       }));
     } catch {
-      // Ignorar erro de escrita do localStorage
+      // Ignorar erro
     }
+  }
+
+  getSystemPtVoices() {
+    if (!this.synth) return [];
+    const all = this.synth.getVoices();
+    return all.filter(v => v.lang && (v.lang.startsWith('pt') || v.lang.includes('BR') || v.lang.includes('PT')));
+  }
+
+  getGoogleVoice() {
+    const pt = this.getSystemPtVoices();
+    return pt.find(v => {
+      const n = (v.name || '').toLowerCase();
+      return n.includes('google') || n.includes('pt-br-x-') || (v.lang === 'pt-BR' && n.includes('brasil'));
+    }) || pt.find(v => v.lang.includes('BR')) || pt[0] || null;
+  }
+
+  getBestBaseVoice() {
+    const pt = this.getSystemPtVoices();
+    return pt.find(v => (v.name || '').toLowerCase().includes('google')) ||
+      pt.find(v => (v.name || '').toLowerCase().includes('daniel')) ||
+      pt.find(v => v.lang.includes('BR')) ||
+      pt[0] || null;
   }
 
   loadVoices() {
-    if (!this.synth) return [];
-    const all = this.synth.getVoices();
-    const ptVoices = all.filter(v => v.lang && (v.lang.startsWith('pt') || v.lang.includes('BR') || v.lang.includes('PT')));
-
-    // Se o usuário já tinha uma voz salva no navegador, priorizá-la
-    if (this.savedVoiceName) {
-      const savedMatch = ptVoices.find(v => v.name === this.savedVoiceName);
-      if (savedMatch) {
-        this.selectedVoice = savedMatch;
-        return ptVoices;
+    const pt = this.getSystemPtVoices();
+    if (this.selectedVoiceIdentifier && this.selectedVoiceIdentifier !== 'google_mobile' && this.selectedVoiceIdentifier !== 'male_studio') {
+      const found = pt.find(v => v.name === this.selectedVoiceIdentifier);
+      if (found) {
+        this.selectedVoice = found;
+        return pt;
       }
     }
-
-    // 1. Prioridade Máxima: Locutor Masculino Neural Ultra-Realista de Estúdio (Antonio Natural no Edge/Windows)
-    const studioAntonio = ptVoices.find(v => {
-      const n = (v.name || '').toLowerCase();
-      return n.includes('antonio') && (n.includes('natural') || n.includes('online'));
-    });
-
-    // 2. Prioridade Alta: Voz Google Português do Brasil (A mesma do celular/Android no Chrome)
-    const googleMobile = ptVoices.find(v => {
-      const n = (v.name || '').toLowerCase();
-      return n.includes('google') || n.includes('pt-br-x-') || (v.lang === 'pt-BR' && n.includes('brasil'));
-    });
-
-    // 3. Prioridade Média: Locutor Masculino do Windows (Daniel ou outros)
-    const maleVoice = ptVoices.find(v => {
-      const n = (v.name || '').toLowerCase();
-      return (
-        n.includes('daniel') ||
-        n.includes('felipe') ||
-        n.includes('fabio') ||
-        n.includes('ricardo') ||
-        n.includes('thiago') ||
-        n.includes('male') ||
-        n.includes('homem') ||
-        (n.includes('neural') && !n.includes('francisca') && !n.includes('maria') && !n.includes('heloisa'))
-      );
-    });
-
-    // 4. Qualquer voz pt-BR
-    const ptBR = ptVoices.find(v => v.lang.includes('BR'));
-    const fallback = ptVoices[0] || all[0];
-
-    this.selectedVoice = studioAntonio || googleMobile || maleVoice || ptBR || fallback;
-    return ptVoices;
+    this.selectedVoice = this.getGoogleVoice();
+    return pt;
   }
 
   getAvailableVoices() {
-    if (!this.synth) return [];
-    const all = this.synth.getVoices();
-    const ptVoices = all.filter(v => v.lang && (v.lang.startsWith('pt') || v.lang.includes('BR') || v.lang.includes('PT')));
+    const pt = this.getSystemPtVoices();
+    const list = [
+      {
+        id: 'google_mobile',
+        name: 'google_mobile',
+        displayName: '📱 Google Voz Natural (A mesma do Celular)',
+        shortName: 'Google Celular'
+      },
+      {
+        id: 'male_studio',
+        name: 'male_studio',
+        displayName: '🎙️ Locutor Masculino (Estúdio Realista)',
+        shortName: 'Locutor Masculino'
+      }
+    ];
 
-    // Classificação e ordenação para colocar as vozes mais realistas no topo
-    const getScore = (v) => {
-      const name = (v.name || '').toLowerCase();
-      if (name.includes('antonio') && (name.includes('natural') || name.includes('online'))) return 100;
-      if (name.includes('google') || name.includes('pt-br-x-')) return 90;
-      if (name.includes('daniel')) return 80;
-      if (name.includes('felipe') || name.includes('fabio') || name.includes('ricardo')) return 75;
-      if (name.includes('francisca') && (name.includes('natural') || name.includes('online'))) return 70;
-      if (v.lang === 'pt-BR') return 50;
-      return 10;
-    };
+    pt.forEach(v => {
+      const lower = (v.name || '').toLowerCase();
+      // Ignorar duplicata da Google já listada como primeira opção
+      if (lower.includes('google') || lower.includes('pt-br-x-')) return;
 
-    ptVoices.sort((a, b) => getScore(b) - getScore(a));
+      let display = `🎙️ ${v.name}`;
+      let short = v.name.split('-')[0].trim().slice(0, 15);
 
-    if (ptVoices.length > 0 && (!this.selectedVoice || !ptVoices.some(v => v.name === this.selectedVoice.name))) {
-      this.loadVoices();
-    }
-    return ptVoices;
+      if (lower.includes('antonio')) {
+        display = '⭐ Antonio Studio (Microsoft Edge IA)';
+        short = 'Antonio Studio';
+      } else if (lower.includes('daniel')) {
+        display = '🎙️ Daniel (Locutor Clássico Windows)';
+        short = 'Daniel';
+      } else if (lower.includes('felipe')) {
+        display = '🎙️ Felipe (Locutor)';
+        short = 'Felipe';
+      } else if (lower.includes('francisca')) {
+        display = '⭐ Francisca Studio (Natural IA)';
+        short = 'Francisca';
+      } else if (lower.includes('maria') || lower.includes('luciana') || lower.includes('heloisa')) {
+        display = `🎙️ ${v.name.split('-')[0].trim()} (Locutora)`;
+        short = v.name.split('-')[0].trim();
+      }
+
+      list.push({
+        id: v.name,
+        name: v.name,
+        displayName: display,
+        shortName: short,
+        rawVoice: v
+      });
+    });
+
+    return list;
   }
 
-  // Nome formatado elegante e amigável para a lista
-  getVoiceDisplayName(voice) {
-    if (!voice) return 'Locutor Padrão HD';
-    const name = voice.name || '';
-    const lower = name.toLowerCase();
-
-    if (lower.includes('antonio') && (lower.includes('natural') || lower.includes('online'))) {
-      return '⭐ Antonio Studio (Ultra Realista IA)';
+  getVoiceDisplayName(item) {
+    if (!item) return '📱 Google Voz Natural (A mesma do Celular)';
+    if (typeof item === 'string') {
+      if (item === 'google_mobile') return '📱 Google Voz Natural (A mesma do Celular)';
+      if (item === 'male_studio') return '🎙️ Locutor Masculino (Estúdio Realista)';
+      return item;
     }
-    if (lower.includes('google') || lower.includes('pt-br-x-')) {
-      return '📱 Google Mobile (Voz do Celular)';
-    }
-    if (lower.includes('daniel')) {
-      return '🎙️ Daniel (Locutor Clássico Windows)';
-    }
-    if (lower.includes('felipe')) {
-      return '🎙️ Felipe (Locutor Jovem)';
-    }
-    if (lower.includes('francisca') && (lower.includes('natural') || lower.includes('online'))) {
-      return '⭐ Francisca Studio (Natural IA)';
-    }
-    if (lower.includes('maria') || lower.includes('luciana') || lower.includes('heloisa')) {
-      return `🎙️ ${name.split('-')[0].trim()} (Locutora)`;
-    }
-    return `🎙️ ${name.replace(/\(pt-[A-Z]+\)/i, '').replace(/Portuguese|Brazil/gi, '').trim()}`;
+    if (item.displayName) return item.displayName;
+    if (item.id === 'google_mobile') return '📱 Google Voz Natural (A mesma do Celular)';
+    if (item.id === 'male_studio') return '🎙️ Locutor Masculino (Estúdio Realista)';
+    return item.name || 'Locutor HD';
   }
 
-  // Nome curto perfeito para caber no botão de leitura da tela
-  getShortVoiceName(voice) {
-    if (!voice) return 'Locutor HD';
-    const lower = (voice.name || '').toLowerCase();
-
+  getShortVoiceName(item) {
+    if (!item) return 'Google Celular';
+    if (typeof item === 'string') {
+      if (item === 'google_mobile') return 'Google Celular';
+      if (item === 'male_studio') return 'Locutor Masculino';
+      return item.slice(0, 15);
+    }
+    if (item.shortName) return item.shortName;
+    if (item.id === 'google_mobile') return 'Google Celular';
+    if (item.id === 'male_studio') return 'Locutor Masculino';
+    const lower = (item.name || '').toLowerCase();
     if (lower.includes('antonio')) return 'Antonio Studio';
-    if (lower.includes('google') || lower.includes('pt-br-x-')) return 'Google Mobile';
     if (lower.includes('daniel')) return 'Daniel';
     if (lower.includes('felipe')) return 'Felipe';
-    if (lower.includes('fabio')) return 'Fábio';
     if (lower.includes('francisca')) return 'Francisca';
     if (lower.includes('maria')) return 'Maria';
-    if (lower.includes('luciana')) return 'Luciana';
-
-    const clean = (voice.name || '').split(/[-–()]/)[0].trim();
-    return clean.slice(0, 14) || 'Locutor HD';
+    return item.name?.split(/[-–()]/)[0].trim().slice(0, 15) || 'Locutor';
   }
 
-  setVoice(voice) {
-    this.selectedVoice = voice;
+  setVoice(voiceOrId) {
+    if (typeof voiceOrId === 'string') {
+      this.selectedVoiceIdentifier = voiceOrId;
+    } else if (voiceOrId?.id) {
+      this.selectedVoiceIdentifier = voiceOrId.id;
+      this.selectedVoice = voiceOrId.rawVoice || null;
+    } else if (voiceOrId?.name) {
+      this.selectedVoiceIdentifier = voiceOrId.name;
+      this.selectedVoice = voiceOrId;
+    }
     this.savePreferences();
   }
 
@@ -271,32 +281,78 @@ class SpeechNarrator {
     this.savePreferences();
   }
 
+  configureUtterance(utterance) {
+    utterance.lang = 'pt-BR';
+
+    // Perfil 1: Locutor Masculino Estúdio (Voz encorpada, aveludada e realista em qualquer navegador/celular)
+    if (this.selectedVoiceIdentifier === 'male_studio') {
+      const best = this.getBestBaseVoice();
+      if (best) {
+        utterance.voice = best;
+        if (best.lang) utterance.lang = best.lang;
+      }
+      utterance.pitch = 0.83; // Tom masculino profundo e natural
+      utterance.rate = 0.94;  // Cadência de leitura de audiolivro
+      return;
+    }
+
+    // Perfil 2: Google Celular (A voz que o usuário achou mais interessante no celular)
+    if (this.selectedVoiceIdentifier === 'google_mobile' || !this.selectedVoiceIdentifier) {
+      const google = this.getGoogleVoice();
+      if (google) {
+        utterance.voice = google;
+        if (google.lang) utterance.lang = google.lang;
+      }
+      utterance.pitch = 1.0;
+      utterance.rate = this.rate;
+      return;
+    }
+
+    // Perfil 3: Voz real do sistema (Antonio, Daniel, Francisca, etc.)
+    const pt = this.getSystemPtVoices();
+    const voice = pt.find(v => v.name === this.selectedVoiceIdentifier) || this.selectedVoice || this.getGoogleVoice();
+    if (voice) {
+      utterance.voice = voice;
+      if (voice.lang) utterance.lang = voice.lang;
+      const lower = (voice.name || '').toLowerCase();
+      // Vozes Online do Edge (como Antonio): taxa e tom DEVEM ser 1.0 para a API da Microsoft não falhar
+      if (lower.includes('online') || lower.includes('natural')) {
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+      } else {
+        utterance.rate = this.rate;
+        utterance.pitch = this.pitch;
+      }
+    }
+  }
+
   // Tocar uma prévia de 3 segundos para testar a voz selecionada
   playSample(onEnd) {
     if (!this.synth) return;
     this.stop();
     this.isSamplePlaying = true;
 
-    const sampleText = 'Olá! Sou a sua voz de leitura do Lumina Book. Pronto para mergulhar nesta história?';
-    const utterance = new SpeechSynthesisUtterance(sampleText);
-    utterance.lang = 'pt-BR';
-    utterance.rate = this.rate;
-    utterance.pitch = this.pitch;
+    const sampleText = this.selectedVoiceIdentifier === 'male_studio'
+      ? 'Olá! Sou o seu locutor masculino do Lumina Book. Pronto para começar a história?'
+      : 'Olá! Sou a voz de leitura oficial do Lumina Book. Pronto para navegar nesta história?';
 
-    if (this.selectedVoice) {
-      utterance.voice = this.selectedVoice;
-    }
+    const utterance = new SpeechSynthesisUtterance(sampleText);
+    this.configureUtterance(utterance);
 
     utterance.onend = () => {
       this.isSamplePlaying = false;
       if (onEnd) onEnd();
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      console.warn('Sample error, fallback:', e);
       this.isSamplePlaying = false;
       if (onEnd) onEnd();
     };
 
+    if (this.synth.paused) {
+      this.synth.resume();
+    }
     this.synth.speak(utterance);
   }
 
@@ -385,15 +441,7 @@ class SpeechNarrator {
     }
 
     const utterance = new SpeechSynthesisUtterance(chunkText);
-    utterance.lang = 'pt-BR';
-    utterance.rate = this.rate;
-
-    // Preserva a naturalidade da voz sem distorção artificial
-    utterance.pitch = this.pitch;
-
-    if (this.selectedVoice) {
-      utterance.voice = this.selectedVoice;
-    }
+    this.configureUtterance(utterance);
 
     utterance.onend = () => {
       if (this.isSpeaking && !this.isPaused) {
@@ -405,7 +453,13 @@ class SpeechNarrator {
 
     utterance.onerror = (e) => {
       if (e.error === 'canceled' || e.error === 'interrupted') return;
-      console.warn('Speech chunk error, advancing:', e);
+      console.warn('Speech chunk error for voice:', utterance.voice?.name, e);
+      // Se falhar (ex: Antonio online sem rede no Edge), faz fallback para o Google Celular imediatamente
+      if (utterance.voice && (utterance.voice.name.includes('Online') || utterance.voice.name.includes('Natural'))) {
+        this.selectedVoiceIdentifier = 'google_mobile';
+        this.speakNextChunk();
+        return;
+      }
       if (this.isSpeaking && !this.isPaused) {
         this.currentChunkIndex++;
         this.speakNextChunk();
