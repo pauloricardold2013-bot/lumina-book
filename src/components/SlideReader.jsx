@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -16,12 +16,12 @@ import {
   Type, 
   Moon, 
   Sun, 
-  Palette,
-  RotateCcw,
-  Mic,
-  Settings2,
-  Headphones,
-  Radio
+  Palette, 
+  RotateCcw, 
+  Mic, 
+  Settings2, 
+  Headphones, 
+  Radio 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sfx, narrator } from '../utils/audio';
@@ -45,10 +45,24 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
   const [sentenceProgress, setSentenceProgress] = useState({ current: 0, total: 0 });
   const [isNarratorSettingsOpen, setIsNarratorSettingsOpen] = useState(false);
   const [autoStoryMode, setAutoStoryMode] = useState(true); // Automatically advance slide when narration ends
-  const [narratorSpeed, setNarratorSpeed] = useState(0.95);
-  const [narratorPitch, setNarratorPitch] = useState(0.85);
+  const [narratorSpeed, setNarratorSpeed] = useState(narrator.rate || 0.96);
+  const [narratorPitch, setNarratorPitch] = useState(narrator.pitch || 1.0);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState('');
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+
+  // Obter voz atual e nomes amigáveis para botões e menus
+  const currentVoiceObj = useMemo(() => {
+    return availableVoices.find(v => v.name === selectedVoiceName) || narrator.selectedVoice;
+  }, [availableVoices, selectedVoiceName]);
+
+  const shortVoiceName = useMemo(() => {
+    return narrator.getShortVoiceName(currentVoiceObj);
+  }, [currentVoiceObj]);
+
+  const displayVoiceName = useMemo(() => {
+    return narrator.getVoiceDisplayName(currentVoiceObj);
+  }, [currentVoiceObj]);
 
   const containerRef = useRef(null);
   const autoPlayTimerRef = useRef(null);
@@ -149,11 +163,18 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
 
     loadVoicesList();
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = loadVoicesList;
+      if (window.speechSynthesis.addEventListener) {
+        window.speechSynthesis.addEventListener('voiceschanged', loadVoicesList);
+      } else {
+        window.speechSynthesis.onvoiceschanged = loadVoicesList;
+      }
     }
 
     return () => {
       narrator.stop();
+      if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.removeEventListener) {
+        window.speechSynthesis.removeEventListener('voiceschanged', loadVoicesList);
+      }
     };
   }, []);
 
@@ -272,12 +293,31 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
     }
   };
 
+  const handleToggleTestVoice = () => {
+    if (isTestingVoice) {
+      narrator.stop();
+      setIsTestingVoice(false);
+    } else {
+      if (isNarrating) {
+        narrator.stop();
+        setIsNarrating(false);
+      }
+      setIsTestingVoice(true);
+      narrator.playSample(() => {
+        setIsTestingVoice(false);
+      });
+    }
+  };
+
   return (
     <div
       ref={containerRef}
+      className="reader-fullscreen-container"
       style={{
         position: 'fixed',
         inset: 0,
+        height: '100dvh',
+        maxHeight: '100dvh',
         zIndex: 50,
         backgroundColor: readingTheme === 'parchment' 
           ? '#f4ece1' 
@@ -315,11 +355,12 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
               narrator.stop();
               onClose();
             }}
+            title="Voltar à Biblioteca"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              padding: '0.4rem 0.75rem',
+              padding: '0.4rem clamp(0.5rem, 1.5vw, 0.75rem)',
               borderRadius: '8px',
               background: 'rgba(255,255,255,0.08)',
               fontSize: '0.84rem',
@@ -329,24 +370,27 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
             }}
           >
             <ChevronLeft size={18} />
-            <span>Voltar</span>
+            <span className="reader-back-text">Voltar</span>
           </button>
 
           <div style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', height: '18px', flexShrink: 0 }} />
 
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
-            <span style={{ 
-              fontWeight: 700, 
-              fontSize: 'clamp(0.82rem, 2.5vw, 0.94rem)',
-              fontFamily: 'var(--font-heading)',
-              letterSpacing: '0.5px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: 'inline-block',
-              maxWidth: 'clamp(110px, 28vw, 240px)',
-              verticalAlign: 'bottom'
-            }}>
+            <span 
+              className="reader-book-title-header"
+              style={{ 
+                fontWeight: 700, 
+                fontSize: 'clamp(0.82rem, 2.5vw, 0.94rem)',
+                fontFamily: 'var(--font-heading)',
+                letterSpacing: '0.5px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: 'inline-block',
+                maxWidth: 'clamp(110px, 28vw, 240px)',
+                verticalAlign: 'bottom'
+              }}
+            >
               {book.title}
             </span>
             <span style={{ 
@@ -361,18 +405,19 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
         </div>
 
         {/* Right: Reading controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-          {/* Locutor Masculino Primary Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.35rem, 1.2vw, 0.5rem)', position: 'relative' }}>
+          {/* Locutor Primary Button com o nome da voz selecionada */}
           <button
             onClick={toggleNarration}
-            title={isNarrating ? "Pausar Narração em Voz Alta" : "Iniciar Narração com Locutor Masculino HD"}
+            title={isNarrating ? "Pausar Narração" : `Ouvir leitura com ${displayVoiceName}`}
+            className="reader-voice-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              padding: '0.45rem 0.95rem',
+              padding: '0.45rem clamp(0.6rem, 1.8vw, 0.95rem)',
               borderRadius: '10px',
-              fontSize: '0.82rem',
+              fontSize: 'clamp(0.75rem, 1.6vw, 0.82rem)',
               fontWeight: 700,
               background: isNarrating 
                 ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
@@ -380,18 +425,26 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
               color: '#ffffff',
               boxShadow: isNarrating ? '0 0 20px rgba(239, 68, 68, 0.6)' : '0 2px 10px rgba(139, 92, 246, 0.4)',
               cursor: 'pointer',
-              border: '1px solid rgba(255,255,255,0.2)'
+              border: '1px solid rgba(255,255,255,0.2)',
+              whiteSpace: 'nowrap',
+              maxWidth: 'clamp(130px, 32vw, 230px)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}
           >
             {isNarrating ? (
               <>
-                <VolumeX size={16} />
-                <span>Pausar Locutor</span>
+                <VolumeX size={16} style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Pausar ({shortVoiceName})
+                </span>
               </>
             ) : (
               <>
-                <Headphones size={16} />
-                <span>🎙️ Locutor Masculino</span>
+                <Headphones size={16} style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  🎙️ {shortVoiceName}
+                </span>
               </>
             )}
           </button>
@@ -399,7 +452,7 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
           {/* Narrator Settings Button */}
           <button
             onClick={() => setIsNarratorSettingsOpen(!isNarratorSettingsOpen)}
-            title="Configurações da Narração e Voz"
+            title="Configurações da Narração e Escolha de Voz"
             style={{
               padding: '0.45rem',
               borderRadius: '8px',
@@ -1117,9 +1170,30 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
             {/* Voice Choice */}
             {availableVoices.length > 0 && (
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.45rem', display: 'block', fontWeight: 600 }}>
-                  Voz do Sistema Detectada:
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    Voz do Sistema (Windows & Celular):
+                  </label>
+                  <button
+                    onClick={handleToggleTestVoice}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: '8px',
+                      background: isTestingVoice ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                      border: isTestingVoice ? '1px solid #ef4444' : '1px solid rgba(245, 158, 11, 0.35)',
+                      color: isTestingVoice ? '#f87171' : '#fbbf24',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isTestingVoice ? <Pause size={13} /> : <Play size={13} />}
+                    <span>{isTestingVoice ? 'Parar Amostra' : 'Ouvir Teste'}</span>
+                  </button>
+                </div>
                 <select
                   value={selectedVoiceName}
                   onChange={(e) => handleVoiceSelect(e.target.value)}
@@ -1137,10 +1211,17 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                 >
                   {availableVoices.map(v => (
                     <option key={v.name} value={v.name}>
-                      {v.name.includes('Natural') || v.name.includes('Online') ? '⭐ ' : ''}{v.name}
+                      {narrator.getVoiceDisplayName(v)}
                     </option>
                   ))}
                 </select>
+                <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  {selectedVoiceName.includes('Google') || selectedVoiceName.includes('pt-br-x-')
+                    ? '📱 Esta é a mesma locução suave utilizada nos celulares Android.'
+                    : (selectedVoiceName.includes('Antonio') 
+                        ? '⭐ Voz Studio Ultra-Realista IA oficial da Microsoft.' 
+                        : '🎙️ Locutor com cadência límpida e entonação natural.')}
+                </p>
               </div>
             )}
 
@@ -1151,7 +1232,7 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                 <span style={{ color: '#fbbf24', fontWeight: 700 }}>{narratorSpeed}x</span>
               </div>
               <div style={{ display: 'flex', gap: '0.45rem' }}>
-                {[0.85, 0.95, 1.05, 1.2].map(speed => (
+                {[0.85, 0.96, 1.05, 1.2].map(speed => (
                   <button
                     key={speed}
                     onClick={() => handleSpeedChange(speed)}
@@ -1168,7 +1249,7 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    {speed === 0.95 ? 'Narrador' : `${speed}x`}
+                    {speed === 0.96 ? 'Ideal' : `${speed}x`}
                   </button>
                 ))}
               </div>
@@ -1177,16 +1258,16 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
             {/* Timbre / Tone (Pitch) */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
-                <span style={{ fontWeight: 600 }}>Timbre (Tom de Locutor):</span>
+                <span style={{ fontWeight: 600 }}>Timbre de Voz (Entonação):</span>
                 <span style={{ color: '#fbbf24', fontWeight: 700 }}>
-                  {narratorPitch <= 0.85 ? 'Locutor Grave' : 'Padrão'}
+                  {narratorPitch >= 0.98 ? 'Voz Natural Humana' : (narratorPitch >= 0.9 ? 'Radialista' : 'Grave')}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '0.45rem' }}>
                 {[
-                  { label: '🎙️ Muito Grave', val: 0.76 },
-                  { label: '🎙️ Locutor Clássico', val: 0.85 },
-                  { label: 'Padrão', val: 1.0 }
+                  { label: '⭐ Natural (1.0)', val: 1.0 },
+                  { label: '🎙️ Radialista (0.92)', val: 0.92 },
+                  { label: '📻 Grave (0.85)', val: 0.85 }
                 ].map(item => (
                   <button
                     key={item.val}
@@ -1195,11 +1276,11 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                       flex: 1,
                       padding: '0.55rem 0.35rem',
                       borderRadius: '10px',
-                      fontSize: '0.8rem',
-                      fontWeight: narratorPitch === item.val ? 800 : 500,
-                      background: narratorPitch === item.val ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(255, 255, 255, 0.06)',
-                      border: narratorPitch === item.val ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.1)',
-                      color: narratorPitch === item.val ? '#090a10' : '#ffffff',
+                      fontSize: '0.78rem',
+                      fontWeight: Math.abs(narratorPitch - item.val) < 0.04 ? 800 : 500,
+                      background: Math.abs(narratorPitch - item.val) < 0.04 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(255, 255, 255, 0.06)',
+                      border: Math.abs(narratorPitch - item.val) < 0.04 ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: Math.abs(narratorPitch - item.val) < 0.04 ? '#090a10' : '#ffffff',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
