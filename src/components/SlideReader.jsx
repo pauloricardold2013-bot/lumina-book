@@ -411,152 +411,7 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
             <Settings2 size={16} />
           </button>
 
-          {/* Narrator Settings Dropdown Popover */}
-          {isNarratorSettingsOpen && (
-            <div style={{
-              position: 'absolute',
-              top: '120%',
-              right: 0,
-              width: '320px',
-              background: 'rgba(15, 18, 30, 0.98)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(139, 92, 246, 0.4)',
-              borderRadius: '16px',
-              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(139, 92, 246, 0.2)',
-              padding: '1.25rem',
-              zIndex: 100,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              animation: 'fadeIn 0.15s ease'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
-                paddingBottom: '0.65rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>
-                  <Radio size={16} color="#f59e0b" />
-                  <span>Configurações do Locutor</span>
-                </div>
-                <button
-                  onClick={() => setIsNarratorSettingsOpen(false)}
-                  style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '2px 6px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
-                >
-                  ✕
-                </button>
-              </div>
 
-              {/* Story Follow Toggle */}
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                background: 'rgba(255,255,255,0.04)',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '8px'
-              }}>
-                <span>Acompanhar história (virar página sozinho)</span>
-                <input
-                  type="checkbox"
-                  checked={autoStoryMode}
-                  onChange={(e) => setAutoStoryMode(e.target.checked)}
-                />
-              </label>
-
-              {/* Voice Choice */}
-              {availableVoices.length > 0 && (
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}>
-                    Voz do Sistema Detectada:
-                  </label>
-                  <select
-                    value={selectedVoiceName}
-                    onChange={(e) => handleVoiceSelect(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: '#121420',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '8px',
-                      padding: '0.45rem',
-                      color: '#ffffff',
-                      fontSize: '0.78rem'
-                    }}
-                  >
-                    {availableVoices.map(v => (
-                      <option key={v.name} value={v.name}>
-                        {v.name.includes('Natural') || v.name.includes('Online') ? '⭐ ' : ''}{v.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Narrator Pacing (Speed) */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                  <span>Cadência / Ritmo:</span>
-                  <span style={{ color: '#fbbf24', fontWeight: 700 }}>{narratorSpeed}x</span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  {[0.85, 0.95, 1.05, 1.2].map(speed => (
-                    <button
-                      key={speed}
-                      onClick={() => handleSpeedChange(speed)}
-                      style={{
-                        flex: 1,
-                        padding: '0.3rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: narratorSpeed === speed ? 800 : 500,
-                        background: narratorSpeed === speed ? '#8b5cf6' : 'rgba(255,255,255,0.06)',
-                        color: '#fff'
-                      }}
-                    >
-                      {speed === 0.95 ? 'Narrador' : `${speed}x`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Timbre / Tone (Pitch) */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                  <span>Timbre (Tom de Locutor):</span>
-                  <span style={{ color: '#fbbf24', fontWeight: 700 }}>
-                    {narratorPitch <= 0.85 ? 'Locutor Grave' : 'Padrão'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  {[
-                    { label: '🎙️ Muito Grave', val: 0.76 },
-                    { label: '🎙️ Locutor Clássico', val: 0.85 },
-                    { label: 'Padrão', val: 1.0 }
-                  ].map(item => (
-                    <button
-                      key={item.val}
-                      onClick={() => handlePitchChange(item.val)}
-                      style={{
-                        flex: 1,
-                        padding: '0.3rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: narratorPitch === item.val ? 800 : 500,
-                        background: narratorPitch === item.val ? '#f59e0b' : 'rgba(255,255,255,0.06)',
-                        color: narratorPitch === item.val ? '#090a10' : '#fff'
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* AutoPlay Slideshow */}
           <button
@@ -1135,6 +990,248 @@ export default function SlideReader({ book, onClose, onSaveProgress, initialSlid
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {/* Narrator Settings Modal Dialog (Over the page) */}
+      {isNarratorSettingsOpen && (
+        <div
+          onClick={() => setIsNarratorSettingsOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(4, 6, 12, 0.78)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '450px',
+              background: 'rgba(15, 18, 30, 0.98)',
+              border: '1px solid rgba(245, 158, 11, 0.45)',
+              borderRadius: '24px',
+              boxShadow: '0 25px 70px rgba(0, 0, 0, 0.9), 0 0 35px rgba(245, 158, 11, 0.25)',
+              padding: '1.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+              position: 'relative'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              paddingBottom: '0.9rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  padding: '0.45rem',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Radio size={20} color="#f59e0b" />
+                </div>
+                <div>
+                  <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: '#ffffff', margin: 0 }}>
+                    Configurações do Locutor
+                  </h3>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                    Personalize a voz, tom e cadência da narração
+                  </span>
+                </div>
+              </div>
+
+              {/* Botão X para fechar a caixa */}
+              <button
+                onClick={() => setIsNarratorSettingsOpen(false)}
+                title="Fechar (X)"
+                aria-label="Fechar"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.85)';
+                  e.currentTarget.style.borderColor = '#ef4444';
+                  e.currentTarget.style.transform = 'scale(1.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Story Follow Toggle */}
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.86rem',
+              cursor: 'pointer',
+              background: 'rgba(255, 255, 255, 0.04)',
+              padding: '0.75rem 1rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              transition: 'background 0.2s ease'
+            }}>
+              <span style={{ fontWeight: 500, color: '#f8fafc' }}>
+                Acompanhar história (virar página sozinho)
+              </span>
+              <input
+                type="checkbox"
+                checked={autoStoryMode}
+                onChange={(e) => setAutoStoryMode(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#f59e0b', cursor: 'pointer' }}
+              />
+            </label>
+
+            {/* Voice Choice */}
+            {availableVoices.length > 0 && (
+              <div>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.45rem', display: 'block', fontWeight: 600 }}>
+                  Voz do Sistema Detectada:
+                </label>
+                <select
+                  value={selectedVoiceName}
+                  onChange={(e) => handleVoiceSelect(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: '#121420',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '12px',
+                    padding: '0.65rem 0.85rem',
+                    color: '#ffffff',
+                    fontSize: '0.84rem',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  {availableVoices.map(v => (
+                    <option key={v.name} value={v.name}>
+                      {v.name.includes('Natural') || v.name.includes('Online') ? '⭐ ' : ''}{v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Narrator Pacing (Speed) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
+                <span style={{ fontWeight: 600 }}>Cadência / Ritmo da Narração:</span>
+                <span style={{ color: '#fbbf24', fontWeight: 700 }}>{narratorSpeed}x</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.45rem' }}>
+                {[0.85, 0.95, 1.05, 1.2].map(speed => (
+                  <button
+                    key={speed}
+                    onClick={() => handleSpeedChange(speed)}
+                    style={{
+                      flex: 1,
+                      padding: '0.55rem 0.35rem',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: narratorSpeed === speed ? 800 : 500,
+                      background: narratorSpeed === speed ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255, 255, 255, 0.06)',
+                      border: narratorSpeed === speed ? '1px solid #a78bfa' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {speed === 0.95 ? 'Narrador' : `${speed}x`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Timbre / Tone (Pitch) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
+                <span style={{ fontWeight: 600 }}>Timbre (Tom de Locutor):</span>
+                <span style={{ color: '#fbbf24', fontWeight: 700 }}>
+                  {narratorPitch <= 0.85 ? 'Locutor Grave' : 'Padrão'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.45rem' }}>
+                {[
+                  { label: '🎙️ Muito Grave', val: 0.76 },
+                  { label: '🎙️ Locutor Clássico', val: 0.85 },
+                  { label: 'Padrão', val: 1.0 }
+                ].map(item => (
+                  <button
+                    key={item.val}
+                    onClick={() => handlePitchChange(item.val)}
+                    style={{
+                      flex: 1,
+                      padding: '0.55rem 0.35rem',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: narratorPitch === item.val ? 800 : 500,
+                      background: narratorPitch === item.val ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(255, 255, 255, 0.06)',
+                      border: narratorPitch === item.val ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: narratorPitch === item.val ? '#090a10' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Botão de Fechar e Salvar */}
+            <button
+              onClick={() => setIsNarratorSettingsOpen(false)}
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: '#090a10',
+                fontWeight: 800,
+                fontSize: '0.92rem',
+                border: 'none',
+                cursor: 'pointer',
+                marginTop: '0.4rem',
+                boxShadow: '0 4px 18px rgba(245, 158, 11, 0.35)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              Concluir e Fechar
+            </button>
           </div>
         </div>
       )}
