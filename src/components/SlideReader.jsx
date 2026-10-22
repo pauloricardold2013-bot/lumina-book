@@ -52,6 +52,7 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState(narrator.selectedVoiceIdentifier || 'google_mobile');
   const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState(null);
 
   // Obter voz atual e nomes amigáveis para botões e menus
   const currentVoiceObj = useMemo(() => {
@@ -716,7 +717,7 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
           key={currentSlideIndex}
           className={`slide-reader-card ${isOpeningCinematic ? 'book-open-cinematic' : (turnDirection === 'next' ? 'page-turn-next' : 'page-turn-prev')} ${readingTheme === 'parchment' ? 'theme-parchment' : (readingTheme === 'emerald' ? 'theme-emerald' : '')}`}
           style={{
-            maxWidth: '880px',
+            maxWidth: (currentSlide.type === 'banner' || currentSlide.isBanner) ? '1080px' : '880px',
             width: '100%',
             minHeight: 'clamp(68vh, 74vh, 80vh)',
             maxHeight: 'clamp(76vh, 84vh, 90vh)',
@@ -788,21 +789,62 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
             </h3>
           )}
 
-          {/* Cover Illustrated Art (if cover or image provided) */}
+          {/* Cover Illustrated Art or High Quality Banner */}
           {currentSlide.imageUrl && (
-            <div style={{
-              margin: '0.5rem auto 1.8rem auto',
-              maxWidth: currentSlide.type === 'cover' ? '320px' : '450px',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
-              border: '2px solid rgba(245, 158, 11, 0.3)'
-            }}>
+            <div 
+              onClick={() => setZoomedImage({ url: currentSlide.imageUrl, title: currentSlide.title, subtitle: currentSlide.subtitle })}
+              className="reader-banner-frame"
+              style={{
+                margin: (currentSlide.type === 'banner' || currentSlide.isBanner) ? '0.5rem 0 1.8rem 0' : '0.5rem auto 1.8rem auto',
+                width: '100%',
+                maxWidth: (currentSlide.type === 'banner' || currentSlide.isBanner) ? '100%' : (currentSlide.type === 'cover' ? '340px' : '480px'),
+                borderRadius: '18px',
+                overflow: 'hidden',
+                boxShadow: (currentSlide.type === 'banner' || currentSlide.isBanner)
+                  ? '0 20px 50px rgba(0,0,0,0.7), 0 0 35px rgba(245, 158, 11, 0.25)'
+                  : '0 15px 35px rgba(0,0,0,0.5)',
+                border: (currentSlide.type === 'banner' || currentSlide.isBanner)
+                  ? '2px solid rgba(245, 158, 11, 0.45)'
+                  : '2px solid rgba(245, 158, 11, 0.3)',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'transform 0.25s ease'
+              }}
+              title="Clique para abrir o Banner em Tela Cheia e Autíssima Qualidade"
+            >
               <img
                 src={currentSlide.imageUrl}
                 alt={currentSlide.title}
-                style={{ width: '100%', height: 'auto', display: 'block' }}
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: (currentSlide.type === 'banner' || currentSlide.isBanner) ? 'clamp(320px, 55vh, 620px)' : 'none',
+                  objectFit: (currentSlide.type === 'banner' || currentSlide.isBanner) ? 'cover' : 'contain',
+                  display: 'block'
+                }}
               />
+              {(currentSlide.type === 'banner' || currentSlide.isBanner) && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '12px',
+                  right: '12px',
+                  background: 'rgba(9, 10, 16, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  color: '#fbbf24',
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: '10px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                }}>
+                  <Maximize size={14} />
+                  <span>Tela Normal • Autíssima Qualidade</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1382,6 +1424,106 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
               Concluir e Fechar
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Fullscreen High Quality Banner Lightbox Modal (Tamanho da Tela Normal) */}
+      {zoomedImage && (
+        <div 
+          onClick={() => setZoomedImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'rgba(5, 6, 10, 0.96)',
+            backdropFilter: 'blur(20px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'clamp(1rem, 2vw, 2rem)',
+            cursor: 'zoom-out'
+          }}
+        >
+          {/* Top Bar */}
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              top: '1.25rem',
+              left: 'clamp(1rem, 3vw, 2.5rem)',
+              right: 'clamp(1rem, 3vw, 2.5rem)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              zIndex: 100000,
+              gap: '1rem',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '0.65rem 1.25rem',
+              backdropFilter: 'blur(12px)'
+            }}
+          >
+            <div>
+              <div style={{
+                color: '#fbbf24',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem'
+              }}>
+                <Sparkles size={14} color="#f59e0b" />
+                Banner em Autíssima Qualidade • Tamanho da Tela Normal
+              </div>
+              <div style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.05rem', marginTop: '2px' }}>
+                {zoomedImage.title || 'Ilustração Oficial'}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setZoomedImage(null)}
+              title="Fechar (ESC)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'; }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <img
+            src={zoomedImage.url}
+            alt={zoomedImage.title || "Banner em Alta Resolução"}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '96vw',
+              maxHeight: '85vh',
+              width: 'auto',
+              height: 'auto',
+              borderRadius: '18px',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 60px rgba(245, 158, 11, 0.35)',
+              border: '2px solid rgba(245, 158, 11, 0.5)',
+              objectFit: 'contain',
+              cursor: 'default',
+              animation: 'bookOpenCinematic 0.3s ease'
+            }}
+          />
         </div>
       )}
     </div>

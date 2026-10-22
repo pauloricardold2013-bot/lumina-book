@@ -9,8 +9,8 @@ import { DEFAULT_BOOKS, DEFAULT_COLLECTIONS } from './data/defaultBooks';
 import { INITIAL_READS_MAP } from './utils/readsTracker';
 import { Heart } from 'lucide-react';
 
-const BOOKS_STORAGE_KEY = 'lumina_books_db_v8';
-const COLLECTIONS_STORAGE_KEY = 'lumina_collections_db_v8';
+const BOOKS_STORAGE_KEY = 'lumina_books_db_v9';
+const COLLECTIONS_STORAGE_KEY = 'lumina_collections_db_v9';
 const PROGRESS_STORAGE_KEY = 'lumina_reading_progress_v7';
 const READS_STORAGE_KEY = 'lumina_book_reads_counter_v1';
 
@@ -18,7 +18,7 @@ export default function App() {
   // Collections state
   const [collections, setCollections] = useState(() => {
     try {
-      const saved = localStorage.getItem(COLLECTIONS_STORAGE_KEY) || localStorage.getItem('lumina_collections_db_v7');
+      const saved = localStorage.getItem(COLLECTIONS_STORAGE_KEY) || localStorage.getItem('lumina_collections_db_v8') || localStorage.getItem('lumina_collections_db_v7');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -32,7 +32,7 @@ export default function App() {
   // Books state persisted in localStorage
   const [books, setBooks] = useState(() => {
     try {
-      const saved = localStorage.getItem(BOOKS_STORAGE_KEY) || localStorage.getItem('lumina_books_db_v7');
+      const saved = localStorage.getItem(BOOKS_STORAGE_KEY) || localStorage.getItem('lumina_books_db_v8');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -63,8 +63,11 @@ export default function App() {
 
           // Ensure any newly added books from DEFAULT_BOOKS exist in the list
           DEFAULT_BOOKS.forEach(defBook => {
-            if (!loaded.some(b => b.id === defBook.id)) {
-              loaded.push(defBook);
+            const existingIdx = loaded.findIndex(b => b.id === defBook.id);
+            if (existingIdx === -1) {
+              loaded.unshift(defBook);
+            } else if (defBook.id === 'pai-de-dois') {
+              loaded[existingIdx] = defBook;
             }
           });
 

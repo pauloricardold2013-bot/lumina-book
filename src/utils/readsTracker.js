@@ -4,7 +4,8 @@ export const INITIAL_READS_MAP = {
   'reino-magico-jhully': 1420,
   'reino-magico-jhully-vol2': 890,
   'cronicas-do-cosmos': 640,
-  'cronicas-do-cosmos-vol2': 480
+  'cronicas-do-cosmos-vol2': 480,
+  'pai-de-dois': 1680
 };
 
 // Formata números de acessos de forma elegante (ex: 1.4k ou 850)

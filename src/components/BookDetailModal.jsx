@@ -1,10 +1,11 @@
-import React from 'react';
-import { X, Play, BookOpen, Layers, Clock, Sparkles, Edit, Calendar, Home, ChevronLeft, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Play, BookOpen, Layers, Clock, Sparkles, Edit, Calendar, Home, ChevronLeft, Eye, Maximize } from 'lucide-react';
 import { sfx } from '../utils/audio';
 import { getActiveReaders } from '../utils/readsTracker';
 
 export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRead, onEdit, readsCount }) {
   if (!isOpen || !book) return null;
+  const [previewBanner, setPreviewBanner] = useState(null);
   const actualReads = readsCount !== undefined ? readsCount : (book.views || 140);
   const activeReaders = getActiveReaders(book.id);
 
@@ -304,6 +305,71 @@ export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRea
               </div>
             )}
 
+            {/* High Quality Banners Section */}
+            {book.banners && book.banners.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ 
+                  fontSize: '0.86rem', 
+                  fontWeight: 800, 
+                  color: '#fbbf24', 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '0.5px', 
+                  marginBottom: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem'
+                }}>
+                  <Sparkles size={16} color="#f59e0b" />
+                  Banners Oficiais em Autíssima Qualidade (Tamanho da Tela Normal)
+                </h4>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))',
+                  gap: '0.75rem'
+                }}>
+                  {book.banners.map((banner, bIdx) => (
+                    <div
+                      key={bIdx}
+                      onClick={() => setPreviewBanner(banner)}
+                      style={{
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s ease, borderColor 0.2s ease',
+                        position: 'relative'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.borderColor = '#fbbf24';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                      }}
+                      title="Clique para ver em Tela Normal e Autíssima Qualidade"
+                    >
+                      <img
+                        src={banner.imageUrl}
+                        alt={banner.title}
+                        style={{ width: '100%', height: '82px', objectFit: 'cover', display: 'block' }}
+                      />
+                      <div style={{ padding: '0.45rem 0.55rem', background: 'rgba(10, 12, 20, 0.9)' }}>
+                        <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {banner.title.split('—')[0].trim()}
+                        </div>
+                        <div style={{ fontSize: '0.66rem', color: '#fbbf24', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Maximize size={10} />
+                          <span>Tela Normal</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Chapters / Slides list */}
             <div>
               <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.75rem' }}>
@@ -358,6 +424,102 @@ export default function BookDetailModal({ book, isOpen, onClose, onGoHome, onRea
           </div>
         </div>
       </div>
+
+      {/* Fullscreen Banner Preview in Ultra Quality */}
+      {previewBanner && (
+        <div 
+          onClick={() => setPreviewBanner(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100000,
+            backgroundColor: 'rgba(5, 6, 10, 0.96)',
+            backdropFilter: 'blur(20px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+            cursor: 'zoom-out'
+          }}
+        >
+          {/* Header */}
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              top: '1.25rem',
+              left: 'clamp(1rem, 3vw, 2.5rem)',
+              right: 'clamp(1rem, 3vw, 2.5rem)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              zIndex: 100001,
+              gap: '1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '16px',
+              padding: '0.65rem 1.25rem',
+              backdropFilter: 'blur(12px)'
+            }}
+          >
+            <div>
+              <div style={{
+                color: '#fbbf24',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem'
+              }}>
+                <Sparkles size={14} color="#f59e0b" />
+                Banner em Autíssima Qualidade • Tamanho da Tela Normal
+              </div>
+              <div style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.05rem', marginTop: '2px' }}>
+                {previewBanner.title}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setPreviewBanner(null)}
+              title="Fechar (ESC)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <img
+            src={previewBanner.imageUrl}
+            alt={previewBanner.title}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '96vw',
+              maxHeight: '85vh',
+              width: 'auto',
+              height: 'auto',
+              borderRadius: '18px',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 60px rgba(245, 158, 11, 0.35)',
+              border: '2px solid rgba(245, 158, 11, 0.5)',
+              objectFit: 'contain',
+              cursor: 'default'
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
