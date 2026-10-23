@@ -795,16 +795,17 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
               onClick={() => setZoomedImage({ url: currentSlide.imageUrl, title: currentSlide.title, subtitle: currentSlide.subtitle })}
               className="reader-banner-frame"
               style={{
-                margin: (currentSlide.type === 'banner' || currentSlide.isBanner) ? '0.5rem 0 1.8rem 0' : '0.5rem auto 1.8rem auto',
+                margin: '0.5rem auto 1.5rem auto',
                 width: '100%',
-                maxWidth: (currentSlide.type === 'banner' || currentSlide.isBanner) ? '100%' : (currentSlide.type === 'cover' ? '340px' : '480px'),
-                borderRadius: '18px',
+                maxWidth: (currentSlide.type === 'banner' || currentSlide.isBanner) ? '680px' : (currentSlide.type === 'cover' ? '280px' : '420px'),
+                borderRadius: '16px',
                 overflow: 'hidden',
+                background: readingTheme === 'parchment' ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.4)',
                 boxShadow: (currentSlide.type === 'banner' || currentSlide.isBanner)
-                  ? '0 20px 50px rgba(0,0,0,0.7), 0 0 35px rgba(245, 158, 11, 0.25)'
-                  : '0 15px 35px rgba(0,0,0,0.5)',
+                  ? '0 12px 35px rgba(0,0,0,0.6), 0 0 25px rgba(245, 158, 11, 0.2)'
+                  : '0 12px 30px rgba(0,0,0,0.5)',
                 border: (currentSlide.type === 'banner' || currentSlide.isBanner)
-                  ? '2px solid rgba(245, 158, 11, 0.45)'
+                  ? '2px solid rgba(245, 158, 11, 0.4)'
                   : '2px solid rgba(245, 158, 11, 0.3)',
                 position: 'relative',
                 cursor: 'pointer',
@@ -818,31 +819,32 @@ export default function SlideReader({ book, onClose, onGoHome, onSaveProgress, i
                 style={{
                   width: '100%',
                   height: 'auto',
-                  maxHeight: (currentSlide.type === 'banner' || currentSlide.isBanner) ? 'clamp(320px, 55vh, 620px)' : 'none',
-                  objectFit: (currentSlide.type === 'banner' || currentSlide.isBanner) ? 'cover' : 'contain',
-                  display: 'block'
+                  maxHeight: (currentSlide.type === 'banner' || currentSlide.isBanner) ? 'clamp(220px, 38vh, 350px)' : (currentSlide.type === 'cover' ? '380px' : '320px'),
+                  objectFit: 'contain',
+                  display: 'block',
+                  margin: '0 auto'
                 }}
               />
               {(currentSlide.type === 'banner' || currentSlide.isBanner) && (
                 <div style={{
                   position: 'absolute',
-                  bottom: '12px',
-                  right: '12px',
-                  background: 'rgba(9, 10, 16, 0.88)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  bottom: '8px',
+                  right: '8px',
+                  background: 'rgba(9, 10, 16, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(245, 158, 11, 0.45)',
                   color: '#fbbf24',
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '10px',
-                  fontSize: '0.78rem',
-                  fontWeight: 800,
+                  padding: '0.3rem 0.65rem',
+                  borderRadius: '8px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.45rem',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                  gap: '0.35rem',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                 }}>
-                  <Maximize size={14} />
-                  <span>Tela Normal • Autíssima Qualidade</span>
+                  <Maximize size={12} />
+                  <span>Foto Inteira • Zoom 8K</span>
                 </div>
               )}
             </div>
